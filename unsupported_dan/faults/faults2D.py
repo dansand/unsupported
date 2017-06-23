@@ -164,6 +164,44 @@ class fault_collection(list):
         return viscosityTI2_fn
 
 
+    ## Note that this is strictly 2D  !
+    #def second_viscosity2(self, firstViscosityFn, pressureField, edotn_SFn, edots_SFn, muVariable, CVariable, viscMin, viscMax):
+        #Similar to above, but with limits in the higher and lower shear viscosity
+        #this is the Mohr-Coulomb effective viscosity
+    #    visc2eff = (muVariable * (-edotn_SFn * firstViscosityFn + pressureField)  + CVariable) / (fn.math.abs(edots_SFn) + 1.0e-15)
+
+    #    viscosityTI2_fn  = fn.misc.min(firstViscosityFn - viscMin, fn.misc.max(firstViscosityFn - viscMax,
+    #                        firstViscosityFn - visc2eff))
+
+    #    return viscosityTI2_fn
+
+    ## Note that this is strictly 2D  !
+    def second_viscosity2(self, firstViscosityFn, pressureField, edotn_SFn, edots_SFn, muVariable, CVariable, viscMin, viscMax):
+
+        #Similar to above, but with limits in the higher and lower shear viscosity
+        #also some safety checks for tensile modes
+
+
+        #don't let faults weaken more than cohesion
+        conditions = [ (muVariable * (-edotn_SFn * firstViscosityFn + pressureField) + CVariable < CVariable, CVariable),
+                   (  True ,  muVariable * (-edotn_SFn * firstViscosityFn + pressureField) + CVariable) ]
+
+        strengthFn = fn.branching.conditional( conditions )
+
+        #this is the Mohr-Coulomb effective viscosity
+        visc2eff = strengthFn/ (2.*fn.math.abs(edots_SFn) + 1.0e-15)
+
+        conditions = [ (viscMax < firstViscosityFn, fn.math.abs(firstViscosityFn - viscMax)),
+                   (  True ,  0.) ]
+
+        checkFn = fn.branching.conditional( conditions )
+
+        viscosityTI2_fn = fn.misc.min(fn.math.abs(firstViscosityFn - viscMin), fn.misc.max(checkFn,
+                          firstViscosityFn - visc2eff))
+
+        return viscosityTI2_fn, strengthFn
+
+
     # Don't trust the pressure in mixed elements ... note, this doesn't really make use of
     # the fact that it is in a class ... that could be handled better (pswarm and psignedDistanceVariable)
     # could be internal to the class

@@ -7,9 +7,9 @@ def neighbour1Matrix(markerLine, k= False):
     comment
     """
 
-    #get the particle coordinates, on the order that the kdTree quuery naturally returns them
+    #get the particle coordinates, in the order that the kdTree query naturally returns them
 
-    #markerLine.rebuild() 
+    #markerLine.rebuild()
     all_particle_coords = markerLine.kdtree.data
     queryOut = markerLine.kdtree.query(all_particle_coords, k=markerLine.swarm.particleCoordinates.data.shape[0] )
     ids = queryOut[1]
@@ -62,7 +62,7 @@ def neighbour2Matrix(markerLine, k= False):
         negDots[:,k:] = False
 
 
-    #this should the the column of the first negative entry. To see which particle this corresponds to
+    #this should be the column of the first negative entry. To see which particle this corresponds to
     #cols = np.argmax(negDots[:,2:], axis = 1) + 2
     cols = np.argmax(negDots[:,:], axis = 1)
     #if cols is zero, it means no obtuse neighbour was found - likely an end particle.
@@ -102,7 +102,9 @@ def neighbour2Matrix2(markerLine, angle = 70., k= 7):
     #build the angles matrix
     R = neighboursAngleMatrix(markerLine)
 
-    #here we penalise distances as their angle increases from 180. - this wieghing value is pretty arbitary, derived from trial-and-error
+    #here we penalise distances as their angle increases from 180. - this weighting value is currently pretty arbitary,
+    #derived from trial-and-error.
+
     fac = 10*dists[:,1].mean()
     weightedDists = dists + fac*(1. - gaussian(R, np.pi, sig=np.deg2rad(angle)))
 
