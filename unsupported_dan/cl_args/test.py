@@ -27,13 +27,16 @@ dp = edict({})
 
 dp.arg2='gary'
 dp.arg3=2.0
+dp.arg4=False
 
-print(dp.arg2, dp.arg3)
+print('default values:')
+print(dp.arg2, dp.arg3, dp.arg4)
 easy_args(sysArgs, dp)
-print(dp.arg2, dp.arg3)
+print('updated values:')
+print(dp.arg2, dp.arg3, dp.arg4)
+
+if dp.arg4 == True:
+    print('and True in the Python sense')
 
 
 # In[ ]:
-
-
-

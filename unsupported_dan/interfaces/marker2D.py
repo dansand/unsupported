@@ -75,7 +75,9 @@ class markerLine2D(object):
 
         if len(all_particle_coords) < 3:
             self.empty = True
-            self.kdtree = lambda x: float('inf')
+            #self.kdtree = lambda x: float('inf')
+            #trying this instead,
+            self.kdtree = kdTree(np.empty((2,0)))
         else:
             self.kdtree = kdTree(all_particle_coords)
 

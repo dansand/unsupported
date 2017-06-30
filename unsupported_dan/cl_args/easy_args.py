@@ -7,6 +7,11 @@ def easy_args(sysArgs, _dict):
 
     * assign new value: =
     * in place multiply: *=
+    * in place divide: /=
+    * in place add: +=
+    * in place subtract: -=
+
+
 
     Parameter
     ---------
@@ -18,22 +23,15 @@ def easy_args(sysArgs, _dict):
     Examples
     ---------
 
-    >>>python script.py dp.arg3=3.0
+    >>>python test.py dp.arg3+=24. dp.arg2='Cheryl', dp.arg4=True
     ...
-    import sys
-    from easydict import EasyDict as edict
-    sysArgs = sys.argv
-    dp = edict({})
-    dp.arg3=2.0
-    easy_args(sysArgs, [dp])
 
-    ...The above code would replace the current value (2.0) of dictionary dp, key 'arg3', with the float 3.0
 
-    python script.py dp.argFoo='Terry'
-        This will replace the current value of dictionary dp, key 'argFoo', with the string 'Terry'
+    ...The above code would
+    :add 24 to dictionary dp, key 'arg3',
+    :replace dictionary dp, key 'arg2', with the string Cheryl
+    :replace dictionary dp, key 'arg4', with the Boolean True
 
-    python script.py dp.arg3*=3.0
-        This will multiply the current value of dictionary dp, key 'arg3', with the float 3.0
 
     """
 
@@ -60,6 +58,16 @@ def easy_args(sysArgs, _dict):
             if '*=' in farg:
                 (dicitem,val) = farg.split("*=") #If in-place multiplication, split on '*='
                 (dic,arg) = dicitem.split(".")
+            if '/=' in farg:
+                (dicitem,val) = farg.split("/=") #If in-place division, split on '/='
+                (dic,arg) = dicitem.split(".")
+
+            if '+=' in farg:
+                (dicitem,val) = farg.split("+=") #If in-place addition, split on '+='
+                (dic,arg) = dicitem.split(".")
+            if '-=' in farg:
+                (dicitem,val) = farg.split("-=") #If in-place addition, split on '-='
+                (dic,arg) = dicitem.split(".")
 
             #print(dic,arg,val)
 
@@ -84,8 +92,19 @@ def easy_args(sysArgs, _dict):
             try:
                 if '*=' in farg:
                         _dict[arg] = _dict[arg]*val #multiply parameter by given factor
+                elif '/=' in farg:
+                        _dict[arg] = _dict[arg]/float(val) #divide parameter by given value
+                elif '+=' in farg:
+                        _dict[arg] = _dict[arg]+val #add to parameter given value
+                elif '-=' in farg:
+                        _dict[arg] = _dict[arg]-val #subtract from parameter given value
                 else:
                         _dict[arg] = val    #or reassign parameter by given value
+
+                #
+                #else:
+                #        _dict[arg] = val    #or reassign parameter by given value
+
             except:
                     pass
 
