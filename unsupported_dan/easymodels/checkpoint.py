@@ -12,7 +12,7 @@ class checkpoint:
 
     ...
 
-    notes: the while uwContext thing. Is is a good idea?
+    notes: the whole uwContext thing. Is is a good idea?
     It's just lets us hook through to mpi4py,
     so we can check for rank, set up barriers, etc.
 

@@ -1,6 +1,8 @@
 
 import numpy as np
 import underworld as uw
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
 
 from scipy.spatial import cKDTree as kdTree
 
@@ -124,6 +126,9 @@ class markerLine2D(object):
         return proximity, fpts
 
 
+
+
+
     def compute_normals(self, coords, thickness=None):
 
 
@@ -150,7 +155,7 @@ class markerLine2D(object):
             fdirector = self.director.data
             #print('1')
         elif self.director.data.shape[0] == 0:
-            fdirector = self.director.data_shadow
+                fdirector = self.director.data_shadow
             #print('2')
         else:
             fdirector = np.concatenate((self.director.data,
@@ -266,3 +271,95 @@ class markerLine2D(object):
             self.director.data[:,1] = Ny[:]
 
         return
+
+    def get_global_coords(self):
+        """
+        In some cases we want to expose the global marker line position to all procs
+        ***currently not working***
+        (Documentation for Allgatherv is pretty sparse.)
+        """
+
+        #localData = self.swarm.particleCoordinates.data[:]
+        #localData = np.ascontiguousarray(self.swarm.particleCoordinates.data)
+        localData = np.copy(self.swarm.particleCoordinates.data)
+        localData.astype(dtype=np.float64)
+
+        globalShape = self.swarm.particleGlobalCount
+        print(localData.shape, globalShape)
+
+        sendbuf = localData
+        #recvbuf = np.empty([globalShape,2])
+
+        recvbuf =  np.zeros([globalShape,2], dtype='d')
+        #comm.Allgatherv([sendbuf, MPI.DOUBLE] , [recvbuf,MPI.DOUBLE])
+        comm.Allgatherv(sendbuf, [recvbuf,MPI.DOUBLE])
+        return recvbuf
+
+
+    def compute_signed_distance2(self, coords, distance=None, use_global=False):
+
+        """
+        A template for how we might implement a global version (all procs can see the entire marker line)
+        Need to fix get_global_coords first!!!
+        """
+
+        #can be important for parallel
+        self.swarm.shadow_particles_fetch()
+
+        if not distance:
+            distance = self.thickness
+
+        #print(self.director.data.shape, self.director.data_shadow.shape)
+
+        if self.empty:
+            return np.empty((0,1)), np.empty(0, dtype="int")
+
+        if uw.nProcs() == 1 or self.director.data_shadow.shape[0] == 0:
+            fdirector = self.director.data
+            print('1')
+        elif self.director.data.shape[0] == 0:
+            fdirector = self.director.data_shadow
+            print('2')
+        else:
+            fdirector = np.concatenate((self.director.data,
+                                    self.director.data_shadow))
+            print('3')
+
+        #option for more expensive global approach
+        if use_global:
+            global_particle_coords = self.get_global_coords()
+
+            if len(global_particle_coords) < 3:
+                temp_kdtree = kdTree(np.empty((2,0)))
+            else:
+                temp_kdtree = kdTree(global_particle_coords)
+
+            d, p  = temp_kdtree.query( coords, distance_upper_bound=distance )
+
+            del temp_kdtree
+
+        else:
+            d, p  = self.kdtree.query( coords, distance_upper_bound=distance )
+
+        fpts = np.where( np.isinf(d) == False )[0]
+
+        director = np.zeros_like(coords)  # Let it be zero outside the region of interest
+        director = fdirector[p[fpts]]
+
+        #print('dir. min', np.linalg.norm(director, axis = 1).min())
+
+        vector = coords[fpts] - self.kdtree.data[p[fpts]]
+
+
+        dist = np.linalg.norm(vector, axis = 1)
+
+        signed_distance = np.empty((coords.shape[0],1))
+        signed_distance[...] = np.inf
+
+        sd = np.einsum('ij,ij->i', vector, director)
+        signed_distance[fpts,0] = sd[:]
+        #signed_distance[:,0] = d[...]
+
+        #return signed_distance, fpts
+        #signed_distance[fpts,0] = dist[:]
+        return signed_distance , fpts
