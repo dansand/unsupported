@@ -23,6 +23,7 @@ class checkpoint:
         assert uwContext, "no underworld"
         self.objDict = {}
         self.dictDict = {}
+        self.measuresDict = {}
 
         state = {'time':0., 'step':0}
         self.addDict(state, 'state')

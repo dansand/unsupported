@@ -102,6 +102,8 @@ class markerLine2D(object):
 
 
 
+
+
     def compute_marker_proximity(self, coords, distance=None):
         """
         Build a mask of values for points within the influence zone.
