@@ -10,7 +10,7 @@
 
 # In[9]:
 
-from unsupported_dan.cl_args import easy_args
+from unsupported_dan.easymodels import easy_args
 import sys
 from easydict import EasyDict as edict
 

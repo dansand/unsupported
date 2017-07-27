@@ -13,4 +13,4 @@ Questions should be addressed to louis.moresi@unimelb.edu.au \n """
 from marker2D import *
 from marker3D import *
 
-from globalMarker2D import *
+#from globalMarker2D import *
