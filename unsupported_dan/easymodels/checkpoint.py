@@ -13,7 +13,7 @@ class checkpoint:
     ...
 
     notes: the whole uwContext thing. Is is a good idea?
-    It's just lets us hook through to mpi4py,
+    It just allows us to call through to mpi4py,
     so we can check for rank, set up barriers, etc.
 
     """
