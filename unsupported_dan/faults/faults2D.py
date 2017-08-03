@@ -156,10 +156,20 @@ class fault_collection(list):
 
 
     ## Note that this is strictly 2D  !
-    def second_viscosity(self, firstViscosityFn, pressureField, edotn_SFn, edots_SFn, muVariable, CVariable):
+    def second_viscosity(self, firstViscosityFn, pressureField, edotn_SFn, edots_SFn, muVariable, CVariable, viscMax):
 
-        viscosityTI2_fn = fn.misc.min(firstViscosityFn*0.99999, fn.misc.max(0.0,
-                          firstViscosityFn - (muVariable * (-edotn_SFn * firstViscosityFn + pressureField)  + CVariable) / (fn.math.abs(edots_SFn) + 1.0e-15)))
+        #don't let faults weaken more than cohesion
+        strengthFn0 = (muVariable * (-edotn_SFn * firstViscosityFn + pressureField) + CVariable)
+        strengthFn = fn.misc.max(strengthFn0, CVariable)
+        #this is the Mohr-Coulomb effective viscosity
+        visc2eff = strengthFn/ (2.*fn.math.abs(edots_SFn) + 1.0e-15)
+
+        #deltaVisc2MaxCutoffFn = fn.misc.max(0., firstViscosityFn - viscMax)
+
+
+        viscosityTI2_fn = fn.misc.min(firstViscosityFn*0.99999, fn.misc.max(deltaVisc2MaxCutoffFn,
+                          firstViscosityFn - visc2eff))
+
 
         return viscosityTI2_fn
 
@@ -181,25 +191,28 @@ class fault_collection(list):
         #Similar to above, but with limits in the higher and lower shear viscosity
         #also some safety checks for tensile modes
 
-
         #don't let faults weaken more than cohesion
-        conditions = [ (muVariable * (-edotn_SFn * firstViscosityFn + pressureField) + CVariable < CVariable, CVariable),
-                   (  True ,  muVariable * (-edotn_SFn * firstViscosityFn + pressureField) + CVariable) ]
-
-        strengthFn = fn.branching.conditional( conditions )
+        strengthFn0 = (muVariable * (-edotn_SFn * firstViscosityFn + pressureField) + CVariable)
+        strengthFn = fn.misc.max(strengthFn0, CVariable)
 
         #this is the Mohr-Coulomb effective viscosity
         visc2eff = strengthFn/ (2.*fn.math.abs(edots_SFn) + 1.0e-15)
 
-        conditions = [ (viscMax < firstViscosityFn, fn.math.abs(firstViscosityFn - viscMax)),
-                   (  True ,  0.) ]
 
-        checkFn = fn.branching.conditional( conditions )
 
-        viscosityTI2_fn = fn.misc.min(fn.math.abs(firstViscosityFn - viscMin), fn.misc.max(checkFn,
-                          firstViscosityFn - visc2eff))
+        #this provides the delta visc value, simply considering a maximum value of visc2
+        #deltaVisc2MaxCutoffFn = fn.misc.max(0., firstViscosityFn - viscMax)
 
-        return viscosityTI2_fn, strengthFn
+        #Now we a
+        #viscosityTI2_fn = fn.misc.min(fn.math.abs(firstViscosityFn - viscMin), fn.misc.max(deltaVisc2MaxCutoffFn,
+        #                  firstViscosityFn - visc2eff))
+
+        #return firstViscosityFn - visc2eff
+
+        #is firstViscosityFn is bigger than visc max, we return zero. That's all we can do.
+        viscosityTI2_fn = fn.misc.min(fn.misc.max(0., firstViscosityFn - viscMin), firstViscosityFn - visc2eff)
+
+        return viscosityTI2_fn
 
 
     # Don't trust the pressure in mixed elements ... note, this doesn't really make use of
