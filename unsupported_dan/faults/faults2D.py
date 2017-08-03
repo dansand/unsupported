@@ -164,7 +164,7 @@ class fault_collection(list):
         #this is the Mohr-Coulomb effective viscosity
         visc2eff = strengthFn/ (2.*fn.math.abs(edots_SFn) + 1.0e-15)
 
-        #deltaVisc2MaxCutoffFn = fn.misc.max(0., firstViscosityFn - viscMax)
+        deltaVisc2MaxCutoffFn = fn.misc.max(0., firstViscosityFn - viscMax)
 
 
         viscosityTI2_fn = fn.misc.min(firstViscosityFn*0.99999, fn.misc.max(deltaVisc2MaxCutoffFn,
