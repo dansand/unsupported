@@ -156,7 +156,7 @@ class fault_collection(list):
 
 
     ## Note that this is strictly 2D  !
-    def second_viscosity(self, firstViscosityFn, pressureField, edotn_SFn, edots_SFn, muVariable, CVariable, viscMax):
+    def second_viscosity(self, firstViscosityFn, pressureField, edotn_SFn, edots_SFn, muVariable, CVariable, viscMax, viscMin):
 
         #don't let faults weaken more than cohesion
         strengthFn0 = (muVariable * (-edotn_SFn * firstViscosityFn + pressureField) + CVariable)
@@ -167,7 +167,7 @@ class fault_collection(list):
         deltaVisc2MaxCutoffFn = fn.misc.max(0., firstViscosityFn - viscMax)
 
 
-        viscosityTI2_fn = fn.misc.min(firstViscosityFn*0.99999, fn.misc.max(deltaVisc2MaxCutoffFn,
+        viscosityTI2_fn = fn.misc.min(firstViscosityFn - viscMin, fn.misc.max(deltaVisc2MaxCutoffFn,
                           firstViscosityFn - visc2eff))
 
 
