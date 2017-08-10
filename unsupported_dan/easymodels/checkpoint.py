@@ -68,7 +68,7 @@ class checkpoint:
             #Though it may be better to restrict to rank 0
             try:
                 with open(os.path.join(self.loadpath, 'state.pkl'), 'rb') as fp:
-                        self.state = pickle.load(fp)
+                        self.dictDict['state'] = pickle.load(fp)
             except:
                 print("Could no load saved state info. Missing or corrupt 'state.pkl' file. ")
 
