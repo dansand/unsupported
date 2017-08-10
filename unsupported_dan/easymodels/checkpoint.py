@@ -67,10 +67,10 @@ class checkpoint:
             #load state dictionary - all procs can do this for now,
             #Though it may be better to restrict to rank 0
             try:
-                with open(os.path.join(self.loadpath, 'state.obj'), 'rb') as fp:
+                with open(os.path.join(self.loadpath, 'state.pkl'), 'rb') as fp:
                         self.state = pickle.load(fp)
             except:
-                print("Could no load saved state info. Missing or corrupt 'state.obj' file. ")
+                print("Could no load saved state info. Missing or corrupt 'state.pkl' file. ")
 
     def updateState(self, step, time):
 
