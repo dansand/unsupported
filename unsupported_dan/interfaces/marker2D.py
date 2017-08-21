@@ -298,12 +298,10 @@ class markerLine2D(object):
         return recvbuf
 
 
-    def compute_signed_distance2(self, coords, distance=None, use_global=False):
+    def compute_signed_distance2(self, coords, distance=None):
 
-        """
-        A template for how we might implement a global version (all procs can see the entire marker line)
-        Need to fix get_global_coords first!!!
-        """
+        # make sure this is called by all procs including those
+        # which have an empty self
 
         #can be important for parallel
         self.swarm.shadow_particles_fetch()
@@ -327,21 +325,7 @@ class markerLine2D(object):
                                     self.director.data_shadow))
             print('3')
 
-        #option for more expensive global approach
-        if use_global:
-            global_particle_coords = self.get_global_coords()
-
-            if len(global_particle_coords) < 3:
-                temp_kdtree = kdTree(np.empty((2,0)))
-            else:
-                temp_kdtree = kdTree(global_particle_coords)
-
-            d, p  = temp_kdtree.query( coords, distance_upper_bound=distance )
-
-            del temp_kdtree
-
-        else:
-            d, p  = self.kdtree.query( coords, distance_upper_bound=distance )
+        d, p  = self.kdtree.query( coords, distance_upper_bound=distance )
 
         fpts = np.where( np.isinf(d) == False )[0]
 
@@ -359,8 +343,7 @@ class markerLine2D(object):
         signed_distance[...] = np.inf
 
         sd = np.einsum('ij,ij->i', vector, director)
-        signed_distance[fpts,0] = sd[:]
-        #signed_distance[:,0] = d[...]
+        signed_distance[fpts,0] = dist[:]
 
         #return signed_distance, fpts
         #signed_distance[fpts,0] = dist[:]
