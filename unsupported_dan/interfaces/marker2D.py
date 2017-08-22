@@ -201,6 +201,8 @@ class markerLine2D(object):
         fpts = np.where( np.isinf(d) == False )[0]
 
         director = np.zeros_like(coords)  # Let it be zero outside the region of interest
+        #this is a bit sneaky, p[fpts] is larger than fdirector
+        #(fdirector[p[fpts]]).shape == vector.shape
         director = fdirector[p[fpts]]
 
         #print('dir. min', np.linalg.norm(director, axis = 1).min())
@@ -348,3 +350,42 @@ class markerLine2D(object):
         #return signed_distance, fpts
         #signed_distance[fpts,0] = dist[:]
         return signed_distance , fpts
+
+
+    def compute_normals2(self, coords, thickness=None):
+
+
+
+        # make sure this is called by all procs including those
+        # which have an empty self
+
+        self.swarm.shadow_particles_fetch()
+
+        if thickness==None:
+            thickness = self.thickness
+
+        # Nx, Ny = _points_to_normals(self)
+
+        if self.empty:
+            return np.empty((0,1)), np.empty(0, dtype="int")
+
+        d, p   = self.kdtree.query( coords, distance_upper_bound=thickness )
+
+        fpts = np.where( np.isinf(d) == False )[0]
+        director = np.zeros_like(coords)
+
+        if uw.nProcs() == 1 or self.director.data_shadow.shape[0] == 0:
+            fdirector = self.director.data
+            #print('1')
+        elif self.director.data.shape[0] == 0:
+                fdirector = self.director.data_shadow
+            #print('2')
+        else:
+            fdirector = np.concatenate((self.director.data,
+                                    self.director.data_shadow))
+            #print('3')
+
+        director[fpts] = fdirector[p[fpts]]
+        director2 = np.einsum('ij,ij->i', director, director)
+
+        return director2, fpts
