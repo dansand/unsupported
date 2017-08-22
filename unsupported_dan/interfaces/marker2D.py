@@ -369,9 +369,9 @@ class markerLine2D(object):
         if self.empty:
             return np.empty((0)), np.empty(0, dtype="int")
 
-        d, p   = self.kdtree.query( coords, distance_upper_bound=thickness )
-
-        fpts = np.where( np.isinf(d) == False )[0]
+        d, p   = self.kdtree.query( coords, distance_upper_bound=10. )
+        fpts = np.where( d < thickness )[0]
+        #fpts = np.where( np.isinf(d) == False )[0]
         director = np.zeros_like(coords)
 
         if uw.nProcs() == 1 or self.director.data_shadow.shape[0] == 0:
