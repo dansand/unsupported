@@ -367,7 +367,7 @@ class markerLine2D(object):
         # Nx, Ny = _points_to_normals(self)
 
         if self.empty:
-            return np.empty((0,1)), np.empty(0, dtype="int")
+            return np.empty((0)), np.empty(0, dtype="int")
 
         d, p   = self.kdtree.query( coords, distance_upper_bound=thickness )
 
