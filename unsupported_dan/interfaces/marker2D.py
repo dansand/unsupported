@@ -180,47 +180,39 @@ class markerLine2D(object):
         if not distance:
             distance = self.thickness
 
-        #print(self.director.data.shape, self.director.data_shadow.shape)
 
+        #This hands back an empty array, that has the right shape to be used empty mask
         if self.empty:
             return np.empty((0,1)), np.empty(0, dtype="int")
 
+        #There are a number of cases to consider (probably more compact ways to this)
+        #serial is trivial.
+        #For parallel, there may be data on local processor, or in shadow zone, or any combination of either.
+        # as long as fdirector is the same shape as self.kdtree.data, this will work
         if uw.nProcs() == 1 or self.director.data_shadow.shape[0] == 0:
             fdirector = self.director.data
-            print('1')
         elif self.director.data.shape[0] == 0:
             fdirector = self.director.data_shadow
-            print('2')
         else:
+            #in this case both are non-empty
             fdirector = np.concatenate((self.director.data,
                                     self.director.data_shadow))
-            print('3')
 
         d, p  = self.kdtree.query( coords, distance_upper_bound=distance )
 
         fpts = np.where( np.isinf(d) == False )[0]
 
-        director = np.zeros_like(coords)  # Let it be zero outside the region of interest
-        #this is a bit sneaky, p[fpts] is larger than fdirector
-        #(fdirector[p[fpts]]).shape == vector.shape
+        #this is a bit sneaky, p[fpts] is larger than fdirector: (fdirector[p[fpts]]).shape == vector.shape
+        #So this mask is size increasing
         director = fdirector[p[fpts]]
-
-        #print('dir. min', np.linalg.norm(director, axis = 1).min())
-
         vector = coords[fpts] - self.kdtree.data[p[fpts]]
-
-
-        dist = np.linalg.norm(vector, axis = 1)
 
         signed_distance = np.empty((coords.shape[0],1))
         signed_distance[...] = np.inf
 
+        #row-wise dot product
         sd = np.einsum('ij,ij->i', vector, director)
         signed_distance[fpts,0] = sd[:]
-        #signed_distance[:,0] = d[...]
-
-        #return signed_distance, fpts
-        #signed_distance[fpts,0] = dist[:]
         return signed_distance , fpts
 
 
@@ -300,92 +292,108 @@ class markerLine2D(object):
         return recvbuf
 
 
-    def compute_signed_distance2(self, coords, distance=None):
+    def neighbourMatrix(self, k= 4):
 
-        # make sure this is called by all procs including those
-        # which have an empty self
+        """
+        neighbourMatrix tries to build nieghbour information for a markerLine,
+        assuming that the points are unordered.
 
-        #can be important for parallel
-        self.swarm.shadow_particles_fetch()
+        For any point, the first neighbour is the closest point.
+        The second neighbour is the closest remaiing point in the set that forms an angle of more than 90 degree
+        to the first neighbour (vector)
 
-        if not distance:
-            distance = self.thickness
+        k is the number of neighbours to test before deciding that a nearest neigbour cannot be found
 
-        #print(self.director.data.shape, self.director.data_shadow.shape)
+        the information is returned in the form of a dense matrix, where each row corresponds to a point in the marker line
+        And most rows will have exactly two non-zero eleemnt, the indexed of the two nearest neighbour.
+        For these points, the matrix is symmetric
 
-        if self.empty:
-            return np.empty((0,1)), np.empty(0, dtype="int")
+        Ideally, there are two rows with only one non-zero column. These are the endpoints.
+        (could be better to have a 1 on the diagonal for these?)
 
-        if uw.nProcs() == 1 or self.director.data_shadow.shape[0] == 0:
-            fdirector = self.director.data
-            print('1')
-        elif self.director.data.shape[0] == 0:
-            fdirector = self.director.data_shadow
-            print('2')
-        else:
-            fdirector = np.concatenate((self.director.data,
-                                    self.director.data_shadow))
-            print('3')
+        """
 
-        d, p  = self.kdtree.query( coords, distance_upper_bound=distance )
+        #################
+        #Neigbour 1
+        #################
 
-        fpts = np.where( np.isinf(d) == False )[0]
+        #get the particle coordinates, in the order that the kdTree query naturally returns them
+        all_particle_coords = self.kdtree.data
+        queryOut = self.kdtree.query(all_particle_coords, k=all_particle_coords.shape[0] )
+        ids = queryOut[1]
+        #build the matrix of neighbour -adjacency
+        AN = np.zeros((all_particle_coords.shape[0],all_particle_coords.shape[0] ))
 
-        director = np.zeros_like(coords)  # Let it be zero outside the region of interest
-        director = fdirector[p[fpts]]
+        #First add the nearest neighbour, which is column one in ids (ids[np.arange(len(AN)), 1])
+        AN[ids[:,0],ids[np.arange(len(AN)), 1]] =  1
 
-        #print('dir. min', np.linalg.norm(director, axis = 1).min())
+        #################
+        #Neigbour 2
+        #################
+        coords = all_particle_coords[ids]
 
-        vector = coords[fpts] - self.kdtree.data[p[fpts]]
+        #for each row in vectorArray, every col. is the vector between the neighbours (distance ordered) and the reference particle
+        #None the None arg needed to get the broadcasting right
+        vectorArray = ( all_particle_coords[ids[:,:]] - all_particle_coords[ids[:,None,0]])
+
+        #this computes the dot product of the neighbour 1 vector with all other neighbour vectors
+        dotProdCompare = np.einsum('ijk, ik->ij', vectorArray[:,:,:], vectorArray[:,1,:])
+        dotProdCompare[:,1]
+
+        #find the first point for which the position vector has a negative dot product with the nearest neighbour
+
+        negDots = dotProdCompare < 0.
+
+        #Here's where we limit the search to k nearest neighbours
+        if k:
+            negDots[:,k:] = False
+
+        #cols holds the index the column of the first negative entry (negative dot-product).
+        cols = np.argmax(negDots[:,:], axis = 1)
+        #Note if cols is zero, it means no obtuse neighbour was found - likely an end particle.
+        answer = ids[np.arange(all_particle_coords.shape[0]),cols]
+        #now add the first subsequent neighbour that is obtuse to the first
+        AN[ids[:,0],answer] =  1
+        #Now remove diagonals - these were any particles where a nearest obtuse neighbour couldn't be found
+        np.fill_diagonal(AN, 0)
+
+        return AN
 
 
-        dist = np.linalg.norm(vector, axis = 1)
+    def laplacianMatrix(self, k = 4):
+        """
+        """
 
-        signed_distance = np.empty((coords.shape[0],1))
-        signed_distance[...] = np.inf
+        dims = self.kdtree.data.shape[1]
 
-        sd = np.einsum('ij,ij->i', vector, director)
-        signed_distance[fpts,0] = dist[:]
-
-        #return signed_distance, fpts
-        #signed_distance[fpts,0] = dist[:]
-        return signed_distance , fpts
+        #Get neighbours
+        all_particle_coords = self.kdtree.data
 
 
-    def compute_normals2(self, coords, thickness=None):
+        #create 2s on the diagonal
+        L = 2.*np.eye(all_particle_coords.shape[0])
+
+        A = self.neighbourMatrix(k= k)
+
+        #set all neighbours to -1
+        L[A == 1] = -1
+        #Find rows that only have one neighbour (these are probably/hopefully endpoints)
+        mask = np.where(A.sum(axis=1) == 1)
+        #Set those rows to zero
+        L[mask,:]  = 0
+        #And set the diagonal back to 2. (The Laplacian operator should just return the particle position)
+        #L[mask,mask] = 2
+
+        return 0.5*L #right?
 
 
+    def pairDistanceMatrix(self):
+        """
+        """
+        partx = self.kdtree.data[:,0]
+        party = self.kdtree.data[:,1]
+        dx = np.subtract.outer(partx , partx )
+        dy = np.subtract.outer(party, party)
+        distanceMatrix = np.hypot(dx, dy)
 
-        # make sure this is called by all procs including those
-        # which have an empty self
-
-        self.swarm.shadow_particles_fetch()
-
-        if thickness==None:
-            thickness = self.thickness
-
-        # Nx, Ny = _points_to_normals(self)
-
-        if self.empty:
-            return np.empty((0)), np.empty(0, dtype="int")
-
-        d, p   = self.kdtree.query( coords, distance_upper_bound=10. )
-        fpts = np.where( d < thickness )[0]
-        #fpts = np.where( np.isinf(d) == False )[0]
-        director = np.zeros_like(coords)
-
-        if uw.nProcs() == 1 or self.director.data_shadow.shape[0] == 0:
-            fdirector = self.director.data
-            #print('1')
-        elif self.director.data.shape[0] == 0:
-                fdirector = self.director.data_shadow
-            #print('2')
-        else:
-            fdirector = np.concatenate((self.director.data,
-                                    self.director.data_shadow))
-            #print('3')
-
-        director[fpts] = fdirector[p[fpts]]
-        director2 = np.einsum('ij,ij->i', director, director)
-
-        return director2, fpts
+        return distanceMatrix
