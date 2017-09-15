@@ -85,3 +85,51 @@ def laplaceVector(markerLine, k,  limit=0.25):
 
 
     return dl[mask]
+
+def neighbourDistanceQuery(markerLine, A, _lowdist=1e-10, _updist = False):
+
+    """
+    Queries the marker line and returns info about particles,
+    where the inter-particle distance fulfils the distance conditions
+
+    Returns:
+    newPoints: midpoints of any pairs of particles fulfilling the conditions.
+    These are generated with both the local and shadow info,
+    meaning that some of the returned particles may no be on the local processor.
+
+    localIds: the ids of local part of the markerLine where the conditions were satisfied.
+    These are intended for deletion, so only the local part of the markerLine is wanted.
+
+    """
+
+    all_particle_coords = markerLine.kdtree.data
+
+
+    #We want only the lower half of the matrix, including the upper half would add particles twice
+    Alow = np.tril(A)
+
+    pd = markerLine.pairDistanceMatrix()
+
+    #Here is the distance mask
+    if _updist:
+        pdMask = np.logical_and(pd > _lowdist, pd < _updist)
+    else:
+        pdMask = pd > _lowdist
+
+    #We only want to choose those particles that have two nearest neighbours (this hopefully excludes endpoints)
+    mask = np.where(A.sum(axis=1) != 2)
+    #Set those rows to zero
+    pdMask[mask,:]  = 0
+
+    #to get the ids simply mutiply the neigbours matrix by the distance mask
+    #this bit works from the full set of points local + shadow
+    AF = Alow*pdMask
+    allIds = np.transpose(np.nonzero(AF))
+    newPoints = np.copy(0.5*(all_particle_coords[allIds[:,0]] + all_particle_coords[allIds[:,1]]))
+
+    #Now we want to get the local ids - typically use these for removing points
+    mask = shadowMask(markerLine)
+    AF = Alow[mask]*pdMask[mask]
+    localIds = np.transpose(np.nonzero(AF))
+
+    return newPoints, localIds.flatten()
