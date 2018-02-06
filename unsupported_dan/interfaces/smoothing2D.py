@@ -39,6 +39,9 @@ def shadowMask(markerLine):
     from an markerLine particle array that includes both shadow and local
     """
 
+    #this function relies on updated information
+    markerLine.rebuild()
+
 
     allcs = markerLine.kdtree.data
     localcs = markerLine.swarm.particleCoordinates.data

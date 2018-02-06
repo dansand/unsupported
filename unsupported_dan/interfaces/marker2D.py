@@ -457,6 +457,7 @@ class markerLine2D(object):
 
         #get the particle coordinates, in the order that the kdTree query naturally returns them
         all_particle_coords = self.kdtree.data
+
         if jitter:
             dX = (np.random.rand(self.kdtree.data.shape[0]) - 0.5)*jitter
             all_particle_coords[:,0] += dX
