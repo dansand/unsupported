@@ -36,7 +36,7 @@ class fault2D(interfaces.markerLine2D):
         if self.empty:
             return np.empty((0,1)), np.empty(0, dtype="int")
 
-        d, p   = self.kdtree.query( coords, distance_upper_bound=self.thickness )
+        d, p   = self.kdtree.query( coords, distance_upper_bound=self.thickness/2.0 )
 
         fpts = np.where( np.isinf(d) == False )[0]
 
@@ -60,6 +60,7 @@ class fault_collection(list):
     '''
     def __init__(self, fault_list=None):
 
+        #initialise parent Class
         super(fault_collection, self).__init__()
 
         if fault_list != None:
@@ -90,19 +91,6 @@ class fault_collection(list):
         directorVector = faultNormalVariable
 
 
-        #  n1 * edot_11 * n1 +
-        #  n2 * edot_21 * n1 +
-        #  n1 * edot_21 * n2 +
-        #  n2 * edot_22 * n2
-
-    #     _edotn_SFn = ( directorVector[0] * strainRateFn[0] * directorVector[0] +
-    #                    directorVector[1] * strainRateFn[2] * directorVector[0] + # Symmetry !!
-    #                    directorVector[0] * strainRateFn[2] * directorVector[1] +
-    #                    directorVector[1] * strainRateFn[1] * directorVector[1]
-    #                 )
-
-
-        ## "OPTIMIZED" VERSION
 
         _edotn_SFn = (        directorVector[0]**2 * strainRateFn[0]  +
                         2.0 * directorVector[1]    * strainRateFn[2] * directorVector[0] +
@@ -116,21 +104,7 @@ class fault_collection(list):
             _edotn_SFn_Map[f.ID] =  _edotn_SFn
 
 
-        #  s1 = -n2
-        #  s2 =  n1
-        #
-        # -n2 * edot_11 * n1 +
-        #  n1 * edot_21 * n1 +
-        # -n2 * edot_21 * n2 +
-        #  n1 * edot_22 * n2
 
-    #     _edots_SFn = ( -directorVector[1] * strainRateFn[0] * directorVector[0] +
-    #                     directorVector[0] * strainRateFn[2] * directorVector[0] +
-    #                    -directorVector[1] * strainRateFn[2] * directorVector[1] +
-    #                     directorVector[0] * strainRateFn[1] * directorVector[1]
-    #                 )
-
-        ## "OPTIMIZED" VERSION
 
 
         _edots_SFn = (  directorVector[0] *  directorVector[1] *(strainRateFn[1] - strainRateFn[0]) +

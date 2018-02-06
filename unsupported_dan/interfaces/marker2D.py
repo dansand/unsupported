@@ -1,8 +1,10 @@
 
 import numpy as np
 import underworld as uw
+from underworld import function as fn
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
+import operator
 
 from scipy.spatial import cKDTree as kdTree
 
@@ -111,9 +113,9 @@ class markerLine2D(object):
         #can be important for parallel
         self.swarm.shadow_particles_fetch()
 
-
+        #search the Kdtree each side of fault at 0.5*thickness
         if not distance:
-            distance = self.thickness
+            distance = self.thickness*0.5
 
         if self.empty:
             return np.empty((0,1)), np.empty(0, dtype="int")
@@ -141,7 +143,7 @@ class markerLine2D(object):
         self.swarm.shadow_particles_fetch()
 
         if thickness==None:
-            thickness = self.thickness
+            thickness = self.thickness/2.0
 
         # Nx, Ny = _points_to_normals(self)
 
@@ -172,13 +174,13 @@ class markerLine2D(object):
     def compute_signed_distance(self, coords, distance=None):
 
         # make sure this is called by all procs including those
-        # which have an empty self
+        # which have are empty
 
         #can be important for parallel
         self.swarm.shadow_particles_fetch()
 
         if not distance:
-            distance = self.thickness
+            distance = self.thickness/2.0
 
 
         #This hands back an empty array, that has the right shape to be used empty mask
@@ -268,6 +270,138 @@ class markerLine2D(object):
 
         return
 
+
+
+    def set_proximity_director(self, swarm, proximityVar, minDistanceFn =fn.misc.constant(1.), maxDistanceFn=fn.misc.constant(1.),
+                           locFac=1., searchFac = 2, directorVar=False ):
+
+        #################
+        #Part1
+        ################
+
+        """
+        |  \  / locFacNeg*-1
+        |   \/
+        |   /\
+        |  /  \ locFacPos
+         ________
+        0-locFac-1
+        """
+
+        locFacPos = self.thickness - (self.thickness *locFac)
+        locFacNeg = -1.*(self.thickness *locFac)
+
+        #this is a relative thickness, default is 1.
+        #try to save an evaluation
+        if type(minDistanceFn) == uw.function.misc.constant:
+            thickness = minDistanceFn.value
+        else:
+            thickness= minDistanceFn.evaluate(swarm)
+
+        #First, we want to rebuild the minimum distance...
+        sd, pts0 = self.compute_signed_distance(swarm.particleCoordinates.data,
+                                                    distance=searchFac*self.thickness)
+
+        #if any Nans appears set them to infs
+        sd[np.where(np.isnan(sd))[0]] = np.inf
+
+
+        #everthing in the min dist halo becomes fault.
+        mask = np.logical_and(sd< locFacPos*thickness,           #positive side of fault
+                              sd> locFacNeg*thickness)[:,0]      #negative side of fault
+
+        proximityVar.data[mask] = self.ID                      #set to Id
+
+        #################
+        #Part2
+        ################
+
+
+
+        #particles with proximity == self.ID, beyond the retention distance, set to zero
+        #I had to do these separately for the two sides of the fault
+
+        #thickness becomes the maxDistanceFunction
+        #try to save an evaluation
+        if type(maxDistanceFn) == uw.function.misc.constant:
+            thickness = maxDistanceFn.value
+        else:
+            thickness= maxDistanceFn.evaluate(swarm)
+
+        #treat each side of the fault seperately
+        mask1 = operator.and_(sd > locFacPos*thickness, proximityVar.data == self.ID)
+        proximityVar.data[mask1] = 0
+        mask2 = operator.and_(sd < locFacNeg*thickness,proximityVar.data == self.ID)
+        proximityVar.data[mask2] = 0
+
+
+        #################
+        #Part3
+        ################
+
+
+        if directorVar:
+            #director domain will be larger than proximity, but proximity will control rheology
+            #searchFac *self.thickness should capture the max proximity distance from the fault
+            #hence, must be set in relation to the maxDistanceFn
+            dv, nzv = self.compute_normals(swarm.particleCoordinates.data, searchFac*self.thickness)
+            mask = np.where(proximityVar.data == self.ID)[0]
+            directorVar.data[mask, :] = dv[mask, :]
+
+
+
+
+
+
+
+    ## Note that this is strictly 2D  !
+    def local_strainrate_fns(self, velocityField, faultNormalVariable, proximityVariable):
+
+        ## This is a quick / short cut way to find the resolved stress components.
+
+        strainRateFn = fn.tensor.symmetric( velocityField.fn_gradient )
+        directorVector = faultNormalVariable
+
+
+
+        _edotn_SFn = (        directorVector[0]**2 * strainRateFn[0]  +
+                        2.0 * directorVector[1]    * strainRateFn[2] * directorVector[0] +
+                              directorVector[1]**2 * strainRateFn[1]
+                    )
+
+
+        #initialse the mapping dictionary with zero strain rate for regions of 0 proximity.
+        _edotn_SFn_Map    = { 0: 0.0 }
+        #for f in self:
+        _edotn_SFn_Map[self.ID] =  _edotn_SFn
+
+
+
+
+
+        _edots_SFn = (  directorVector[0] *  directorVector[1] *(strainRateFn[1] - strainRateFn[0]) +
+                        strainRateFn[2] * (directorVector[0]**2 - directorVector[1]**2)
+                     )
+
+
+       #initialse the mapping dictionary with (nearly) zero strain rate for regions of 0 proximity.
+        _edots_SFn_Map = { 0: 1.0e-15 }
+        _edots_SFn_Map[self.ID] =  _edots_SFn
+
+        edotn_SFn =     fn.branching.map( fn_key = proximityVariable,
+                                                     mapping = _edotn_SFn_Map)
+
+
+        edots_SFn =     fn.branching.map( fn_key = proximityVariable,
+                                                     mapping = _edots_SFn_Map )
+
+
+        return edotn_SFn, edots_SFn
+
+
+
+
+
     def get_global_coords(self):
         """
         In some cases we want to expose the global marker line position to all procs
@@ -292,24 +426,26 @@ class markerLine2D(object):
         return recvbuf
 
 
-    def neighbourMatrix(self, k= 4):
+    def neighbourMatrix(self, k= 4, jitter=False):
 
         """
-        neighbourMatrix tries to build nieghbour information for a markerLine,
+        neighbourMatrix tries to build neighbour information for a markerLine,
         assuming that the points are unordered.
 
         For any point, the first neighbour is the closest point.
-        The second neighbour is the closest remaiing point in the set that forms an angle of more than 90 degree
+        The second neighbour is the closest remainng point in the set that forms an angle of more than 90 degree
         to the first neighbour (vector)
 
-        k is the number of neighbours to test before deciding that a nearest neigbour cannot be found
+        k is the number of neighbours to test before deciding that a nearest neigbour cannot be found (i.e the end of line)
 
         the information is returned in the form of a dense matrix, where each row corresponds to a point in the marker line
-        And most rows will have exactly two non-zero eleemnt, the indexed of the two nearest neighbour.
+        And most rows will have exactly two non-zero element, the indexed of the two nearest neighbour.
         For these points, the matrix is symmetric
 
         Ideally, there are two rows with only one non-zero column. These are the endpoints.
         (could be better to have a 1 on the diagonal for these?)
+
+        jitter is designed as a way of flushing duplicates, can/should be very small.
 
         """
 
@@ -319,6 +455,12 @@ class markerLine2D(object):
 
         #get the particle coordinates, in the order that the kdTree query naturally returns them
         all_particle_coords = self.kdtree.data
+        if jitter:
+            dX = (np.random.rand(self.swarm.particleLocalCount) - 0.5)*jitter
+            all_particle_coords[:,0] += dX
+            all_particle_coords[:,1] += dX
+
+
         queryOut = self.kdtree.query(all_particle_coords, k=all_particle_coords.shape[0] )
         ids = queryOut[1]
         #build the matrix of neighbour -adjacency
@@ -397,3 +539,78 @@ class markerLine2D(object):
         distanceMatrix = np.hypot(dx, dy)
 
         return distanceMatrix
+
+
+class line_collection(list):
+    '''
+    Collection (list) of markerLine2D objects which together define the global rheology
+    '''
+    def __init__(self, line_list=None):
+
+        #initialise parent Class
+        super(line_collection, self).__init__()
+
+        if line_list != None:
+            for line in line_list:
+                if isinstance(line, markerLine2D):
+                    super(line_collection, self).append(line)
+                else:
+                    print "Non line object ", line, " not added to collection"
+
+        return
+
+    def append(self, line):
+        '''
+
+        '''
+        if isinstance(line, markerLine2D): #
+            super(line_collection, self).append(line)
+        else:
+            print "Non Line object ", line, " not added to collection"
+
+
+    ## Note that this is strictly 2D  !
+    def global_line_strainrate_fns(self, velocityField, lineNormalVariable, proximityVariable):
+
+        ## This is a quick / short cut way to find the resolved stress components.
+
+        strainRateFn = fn.tensor.symmetric( velocityField.fn_gradient )
+        directorVector = lineNormalVariable
+
+
+
+        _edotn_SFn = (        directorVector[0]**2 * strainRateFn[0]  +
+                        2.0 * directorVector[1]    * strainRateFn[2] * directorVector[0] +
+                              directorVector[1]**2 * strainRateFn[1]
+                    )
+
+        # any non-zero proximity requires the computation of the above
+
+        _edotn_SFn_Map    = { 0: 0.0 }
+        for f in self:
+            _edotn_SFn_Map[f.ID] =  _edotn_SFn
+
+
+
+
+
+        _edots_SFn = (  directorVector[0] *  directorVector[1] *(strainRateFn[1] - strainRateFn[0]) +
+                        strainRateFn[2] * (directorVector[0]**2 - directorVector[1]**2)
+                     )
+
+
+        _edots_SFn_Map = { 0: 1.0e-15 }
+
+        for f in self:
+            _edots_SFn_Map[f.ID] =  _edots_SFn
+
+
+        edotn_SFn =     fn.branching.map( fn_key = proximityVariable,
+                                                     mapping = _edotn_SFn_Map)
+
+
+        edots_SFn =     fn.branching.map( fn_key = proximityVariable,
+                                                     mapping = _edots_SFn_Map )
+
+
+        return edotn_SFn, edots_SFn

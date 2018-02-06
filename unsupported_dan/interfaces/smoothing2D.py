@@ -34,17 +34,26 @@ def particlesToAdd(markerLine, A, _lowdist, _updist = False):
 
 def shadowMask(markerLine):
 
-    allcs = markerLine.kdtree.data
-    localcs = markerLine.swarm.particleCoordinates.data
+    """
+    Builds a boolean mask that filters only the local particles,
+    from an markerLine particle array that includes both shadow and local
+    """
 
-    #xmatch = allcs[:,0].searchsorted(localcs[:,0])
-    #ymatch = allcs[:,1].searchsorted(localcs[:,1])
-    xmatch =np.in1d(allcs[:,0], localcs[:,0])
-    ymatch =np.in1d(allcs[:,1], localcs[:,1])
+    if markerLine.swarm.particleGlobalCount == markerLine.swarm.particleLocalCount:
+        indexes = np.full(markerLine.swarm.particleGlobalCount, True, dtype=bool)
+        return indexes
+    else:
+        allcs = markerLine.kdtree.data
+        localcs = markerLine.swarm.particleCoordinates.data
+
+        #xmatch = allcs[:,0].searchsorted(localcs[:,0])
+        #ymatch = allcs[:,1].searchsorted(localcs[:,1])
+        xmatch =np.in1d(allcs[:,0], localcs[:,0])
+        ymatch =np.in1d(allcs[:,1], localcs[:,1])
 
 
-    indexes = xmatch[(xmatch == ymatch)]
-    return indexes
+        indexes = xmatch[(xmatch == ymatch)]
+        return indexes
 
 
 def laplaceVector(markerLine, k,  limit=0.25):
@@ -62,6 +71,10 @@ def laplaceVector(markerLine, k,  limit=0.25):
     for item in nbIndexes:
         if len(item) == 1:
             item.append(item[0])
+        #Adding this for case of empty items
+        if len(item) == 0:
+            item.append(0)
+            item.append(0)
 
     n1 = np.array(nbIndexes)[:,0]
     n2 = np.array(nbIndexes)[:,1]
@@ -133,3 +146,54 @@ def neighbourDistanceQuery(markerLine, A, _lowdist=1e-10, _updist = False):
     localIds = np.transpose(np.nonzero(AF))
 
     return newPoints, localIds.flatten()
+
+
+def repair_markerLines(markerLine, ds, smoothCycles=1, k=4, _lambda = 0.5, laplaceLimit = 0.25 ):
+
+    """
+    smoothCycles ...
+    k = max number of particles to search for neighbour information
+    _lambda = 0.5         #A dampening  applied to the entire laplacian vector
+    laplaceLimit = 0.25   #fraction of inter-particle distance that is the maximum laplace displacement
+    """
+
+    ###########
+    #Removal
+    ###########
+    #dummy arrays to use in case there's no markerLine on the proc
+    markerLine.rebuild()
+    midPoints = np.empty((0,2))
+    currentIds = np.empty((0,)).astype('bool')
+    if not markerLine.empty:
+        A = markerLine.neighbourMatrix(k =k, jitter=1e-8)
+        midPoints, currentIds = neighbourDistanceQuery(markerLine, A, _lowdist=0.,_updist= 0.5*ds)
+        #Need to delete those points first, before the
+    with markerLine.swarm.deform_swarm():
+        markerLine.swarm.particleCoordinates.data[currentIds] = (9999999., 9999999.)
+
+    markerLine.add_points(midPoints[:,0], midPoints[:,1])
+
+
+    ###########
+    #Smoothing
+    ###########
+    for cyc in range(smoothCycles):
+        markerLine.rebuild()
+        if not markerLine.empty:
+            Dl = laplaceVector(markerLine, k = k, limit=laplaceLimit)
+        else:
+            Dl = 0.0
+
+        with markerLine.swarm.deform_swarm():
+                markerLine.swarm.particleCoordinates.data[:] -= _lambda *Dl
+
+    ###########
+    #Addition
+    ###########
+    markerLine.rebuild()
+    if not markerLine.empty:
+        A = markerLine.neighbourMatrix( k =k)
+        newPoints = particlesToAdd(markerLine, A, _lowdist=2.*ds) #start addding particles above _lowdist
+    else:
+        newPoints = np.empty((0,2))
+    markerLine.add_points(newPoints[:,0], newPoints[:,1])

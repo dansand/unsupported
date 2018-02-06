@@ -1,4 +1,9 @@
 ##
+
+"""
+analysis tools.
+"""
+
 import numpy as np
 def eig2d(sigma):
 
