@@ -329,10 +329,12 @@ class markerLine2D(object):
             thickness= maxDistanceFn.evaluate(swarm)
 
         #treat each side of the fault seperately
-        mask1 = operator.and_(sd > locFacPos*thickness, proximityVar.data == self.ID)
-        proximityVar.data[mask1] = 0
-        mask2 = operator.and_(sd < locFacNeg*thickness,proximityVar.data == self.ID)
-        proximityVar.data[mask2] = 0
+        #parallel protection
+        if sd.shape[0] == proximityVar.data.shape[0]:
+            mask1 = operator.and_(sd > locFacPos*thickness, proximityVar.data == self.ID)
+            proximityVar.data[mask1] = 0
+            mask2 = operator.and_(sd < locFacNeg*thickness,proximityVar.data == self.ID)
+            proximityVar.data[mask2] = 0
 
 
         #################
@@ -456,7 +458,7 @@ class markerLine2D(object):
         #get the particle coordinates, in the order that the kdTree query naturally returns them
         all_particle_coords = self.kdtree.data
         if jitter:
-            dX = (np.random.rand(self.swarm.particleLocalCount) - 0.5)*jitter
+            dX = (np.random.rand(self.kdtree.data.shape[0]) - 0.5)*jitter
             all_particle_coords[:,0] += dX
             all_particle_coords[:,1] += dX
 

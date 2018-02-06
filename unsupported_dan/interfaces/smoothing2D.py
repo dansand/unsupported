@@ -39,21 +39,15 @@ def shadowMask(markerLine):
     from an markerLine particle array that includes both shadow and local
     """
 
-    if markerLine.swarm.particleGlobalCount == markerLine.swarm.particleLocalCount:
-        indexes = np.full(markerLine.swarm.particleGlobalCount, True, dtype=bool)
-        return indexes
-    else:
-        allcs = markerLine.kdtree.data
-        localcs = markerLine.swarm.particleCoordinates.data
 
-        #xmatch = allcs[:,0].searchsorted(localcs[:,0])
-        #ymatch = allcs[:,1].searchsorted(localcs[:,1])
-        xmatch =np.in1d(allcs[:,0], localcs[:,0])
-        ymatch =np.in1d(allcs[:,1], localcs[:,1])
+    allcs = markerLine.kdtree.data
+    localcs = markerLine.swarm.particleCoordinates.data
 
+    xmatch =np.in1d(allcs[:,0], localcs[:,0])
+    ymatch =np.in1d(allcs[:,1], localcs[:,1])
 
-        indexes = xmatch[(xmatch == ymatch)]
-        return indexes
+    indexes = xmatch[(xmatch == ymatch)]
+    return indexes
 
 
 def laplaceVector(markerLine, k,  limit=0.25):
