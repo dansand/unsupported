@@ -434,6 +434,7 @@ class markerLine2D(object):
         neighbourMatrix tries to build neighbour information for a markerLine,
         assuming that the points are unordered.
 
+
         For any point, the first neighbour is the closest point.
         The second neighbour is the closest remainng point in the set that forms an angle of more than 90 degree
         to the first neighbour (vector)
@@ -449,6 +450,8 @@ class markerLine2D(object):
 
         jitter is designed as a way of flushing duplicates, can/should be very small.
 
+        ***This should be safe to run on all processors, and we should always attempt to do so.
+
         """
 
         #################
@@ -458,10 +461,11 @@ class markerLine2D(object):
         #get the particle coordinates, in the order that the kdTree query naturally returns them
         all_particle_coords = self.kdtree.data
 
-        if jitter:
-            dX = (np.random.rand(self.kdtree.data.shape[0]) - 0.5)*jitter
-            all_particle_coords[:,0] += dX
-            all_particle_coords[:,1] += dX
+        if all_particle_coords.shape[1]:
+            if jitter:
+                dX = (np.random.rand(self.kdtree.data.shape[0]) - 0.5)*jitter
+                all_particle_coords[:,0] += dX
+                all_particle_coords[:,1] += dX
 
 
         queryOut = self.kdtree.query(all_particle_coords, k=all_particle_coords.shape[0] )

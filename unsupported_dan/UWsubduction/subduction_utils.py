@@ -208,7 +208,7 @@ def build_fault(tectModel, plates, gradFn, thickness, maxDepth, ds, vertoffset, 
 
     #print(plateBounds[0], plateBounds[1])
 
-    faultData = np.row_stack((plateData, slabdata[1:,:]))
+    faultData = np.row_stack((plateData, slabdata))
     #print(plateData.shape, slabdata.shape)
 
     #build the marker Line

@@ -40,7 +40,7 @@ def shadowMask(markerLine):
     """
 
     #this function relies on updated information
-    markerLine.rebuild()
+    #markerLine.rebuild()
 
 
     allcs = markerLine.kdtree.data
@@ -158,11 +158,15 @@ def repair_markerLines(markerLine, ds, smoothCycles=1, k=4, _lambda = 0.5, lapla
     #Removal
     ###########
     #dummy arrays to use in case there's no markerLine on the proc
-    markerLine.rebuild()
+
     midPoints = np.empty((0,2))
     currentIds = np.empty((0,)).astype('bool')
+
+    #***I'm pairing these, because the shadow mask Fn only works is line is rebuilt.
+    A = markerLine.neighbourMatrix(k =k, jitter=1e-8)
+    markerLine.rebuild()
+    #***
     if not markerLine.empty:
-        A = markerLine.neighbourMatrix(k =k, jitter=1e-8)
         midPoints, currentIds = neighbourDistanceQuery(markerLine, A, _lowdist=0.,_updist= 0.5*ds)
         #Need to delete those points first, before the
     with markerLine.swarm.deform_swarm():
