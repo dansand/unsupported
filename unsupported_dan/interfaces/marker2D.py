@@ -22,6 +22,13 @@ class markerLine2D(object):
         # then set this flag and return appropriately. This can be checked once the swarm is
         # populated.
 
+        #however, a major constraint is that in order to get local + shadow particles,
+        #we rely to a UW function with an mpi barrier (i.e. swarm.shadow_particles_fetch())
+
+        #We supply a @property method self.data as a handle for the local + shadow particles
+        #the main thing to remember is to not make calls to self.data in any kind of conditional setting
+        #in which some processors might be excluded.
+
         self.empty = False
 
         # Should do some checking first
@@ -50,6 +57,8 @@ class markerLine2D(object):
 
     @property
     def data(self):
+        #this getter must be called by all procs in parallel
+        #https://github.com/underworldcode/underworld2/blob/12a090589d1daaffddd685678d7966e4c664aeab/underworld/swarm/_swarm.py#L536
         return self.all_coords()
 
     def add_points(self, pointsX, pointsY):
@@ -70,6 +79,17 @@ class markerLine2D(object):
     def _update_kdtree(self):
 
         self.empty = False
+        #all_particle_coords = self.data
+
+#        self.swarm.shadow_particles_fetch()
+
+#        dims = self.swarm.particleCoordinates.data.shape[1]
+
+#        pc = np.append(self.swarm.particleCoordinates.data,
+#                       self.swarm.particleCoordinates.data_shadow)
+
+#        all_particle_coords = pc.reshape(-1,dims)
+
         all_particle_coords = self.data
 
         if len(all_particle_coords) < 3:
@@ -111,7 +131,10 @@ class markerLine2D(object):
 
         all_coords = pc.reshape(-1,dims)
 
-        return all_coords
+        if all_coords.shape[0] == 0:
+            return all_coords.T
+        else:
+            return all_coords
 
 
 
@@ -186,7 +209,10 @@ class markerLine2D(object):
         # which have are empty
 
         #can be important for parallel
-        self.swarm.shadow_particles_fetch()
+        #self.swarm.shadow_particles_fetch()
+
+        #Always need to call self.data on all procs
+        all_particle_coords = self.data
 
         if not distance:
             distance = self.thickness/2.0
@@ -216,8 +242,7 @@ class markerLine2D(object):
         #this is a bit sneaky, p[fpts] is larger than fdirector: (fdirector[p[fpts]]).shape == vector.shape
         #So this mask is size increasing
         director = fdirector[p[fpts]]
-        all_particle_coords = self.all_coords()
-        vector = coords[fpts] - self.data[p[fpts]]
+        vector = coords[fpts] - all_particle_coords[p[fpts]]
         #vector = coords[fpts] - self.kdtree.data[p[fpts]]
 
         signed_distance = np.empty((coords.shape[0],1))
@@ -240,6 +265,9 @@ class markerLine2D(object):
         #can be important for parallel
         self.swarm.shadow_particles_fetch()
 
+        #Always need to call self.data on all procs
+        all_particle_coords = self.data
+
         if self.empty:
             self.director.data[...] = 0.0
         else:
@@ -255,8 +283,8 @@ class markerLine2D(object):
 
                 # neighbour points are neighbours[1] and neighbours[2]
 
-                XY1 = self.data[neighbours[1]]
-                XY2 = self.data[neighbours[2]]
+                XY1 = all_particle_coords[neighbours[1]]
+                XY2 = all_particle_coords[neighbours[2]]
                 #XY1 = self.kdtree.data[neighbours[1]]
                 #XY2 = self.kdtree.data[neighbours[2]]
 
@@ -430,7 +458,7 @@ class markerLine2D(object):
         localData.astype(dtype=np.float64)
 
         globalShape = self.swarm.particleGlobalCount
-        print(localData.shape, globalShape)
+        #print(localData.shape, globalShape)
 
         sendbuf = localData
         #recvbuf = np.empty([globalShape,2])
@@ -472,13 +500,12 @@ class markerLine2D(object):
         #################
 
         #get the particle coordinates, in the order that the kdTree query naturally returns them
-        #all_particle_coords = self.kdtree.data
         all_particle_coords = self.data
 
         if all_particle_coords.shape[1]:
             if jitter:
                 #dX = (np.random.rand(self.kdtree.data.shape[0]) - 0.5)*jitter
-                dX = (np.random.rand(self.data.shape[0]) - 0.5)*jitter
+                dX = (np.random.rand(all_particle_coords.shape[0]) - 0.5)*jitter
                 all_particle_coords[:,0] += dX
                 all_particle_coords[:,1] += dX
 
@@ -558,12 +585,22 @@ class markerLine2D(object):
         #partx = self.kdtree.data[:,0]
         #party = self.kdtree.data[:,1]
 
-        partx = self.data[:,0]
-        party = self.data[:,1]
+        all_particle_coords = self.data
 
-        dx = np.subtract.outer(partx , partx )
-        dy = np.subtract.outer(party, party)
-        distanceMatrix = np.hypot(dx, dy)
+        if all_particle_coords.shape[1]:
+
+
+            partx = all_particle_coords[:,0]
+            party = all_particle_coords[:,1]
+
+
+            dx = np.subtract.outer(partx , partx )
+            dy = np.subtract.outer(party, party)
+            distanceMatrix = np.hypot(dx, dy)
+
+        else:
+            distanceMatrix = np.empty(0)
+
 
         return distanceMatrix
 
