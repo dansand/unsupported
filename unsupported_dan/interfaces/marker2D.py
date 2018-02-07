@@ -48,7 +48,9 @@ class markerLine2D(object):
 
         return
 
-
+    @property
+    def data(self):
+        return self.all_coords()
 
     def add_points(self, pointsX, pointsY):
 
@@ -68,14 +70,7 @@ class markerLine2D(object):
     def _update_kdtree(self):
 
         self.empty = False
-        self.swarm.shadow_particles_fetch()
-
-        dims = self.swarm.particleCoordinates.data.shape[1]
-
-        pc = np.append(self.swarm.particleCoordinates.data,
-                       self.swarm.particleCoordinates.data_shadow)
-
-        all_particle_coords = pc.reshape(-1,dims)
+        all_particle_coords = self.data
 
         if len(all_particle_coords) < 3:
             self.empty = True
@@ -102,7 +97,21 @@ class markerLine2D(object):
 
         return
 
+    def all_coords(self):
 
+        """
+        Get local and shadow particles
+        """
+        self.swarm.shadow_particles_fetch()
+
+        dims = self.swarm.particleCoordinates.data.shape[1]
+
+        pc = np.append(self.swarm.particleCoordinates.data,
+                       self.swarm.particleCoordinates.data_shadow)
+
+        all_coords = pc.reshape(-1,dims)
+
+        return all_coords
 
 
 
@@ -207,7 +216,9 @@ class markerLine2D(object):
         #this is a bit sneaky, p[fpts] is larger than fdirector: (fdirector[p[fpts]]).shape == vector.shape
         #So this mask is size increasing
         director = fdirector[p[fpts]]
-        vector = coords[fpts] - self.kdtree.data[p[fpts]]
+        all_particle_coords = self.all_coords()
+        vector = coords[fpts] - self.data[p[fpts]]
+        #vector = coords[fpts] - self.kdtree.data[p[fpts]]
 
         signed_distance = np.empty((coords.shape[0],1))
         signed_distance[...] = np.inf
@@ -244,8 +255,10 @@ class markerLine2D(object):
 
                 # neighbour points are neighbours[1] and neighbours[2]
 
-                XY1 = self.kdtree.data[neighbours[1]]
-                XY2 = self.kdtree.data[neighbours[2]]
+                XY1 = self.data[neighbours[1]]
+                XY2 = self.data[neighbours[2]]
+                #XY1 = self.kdtree.data[neighbours[1]]
+                #XY2 = self.kdtree.data[neighbours[2]]
 
                 dXY = XY2 - XY1
 
@@ -459,11 +472,13 @@ class markerLine2D(object):
         #################
 
         #get the particle coordinates, in the order that the kdTree query naturally returns them
-        all_particle_coords = self.kdtree.data
+        #all_particle_coords = self.kdtree.data
+        all_particle_coords = self.data
 
         if all_particle_coords.shape[1]:
             if jitter:
-                dX = (np.random.rand(self.kdtree.data.shape[0]) - 0.5)*jitter
+                #dX = (np.random.rand(self.kdtree.data.shape[0]) - 0.5)*jitter
+                dX = (np.random.rand(self.data.shape[0]) - 0.5)*jitter
                 all_particle_coords[:,0] += dX
                 all_particle_coords[:,1] += dX
 
@@ -513,11 +528,12 @@ class markerLine2D(object):
         """
         """
 
-        dims = self.kdtree.data.shape[1]
+        #dims = self.kdtree.data.shape[1]
+        dims = self.data.shape[1]
 
         #Get neighbours
-        all_particle_coords = self.kdtree.data
-
+        #all_particle_coords = self.kdtree.data
+        all_particle_coords = self.data
 
         #create 2s on the diagonal
         L = 2.*np.eye(all_particle_coords.shape[0])
@@ -539,8 +555,12 @@ class markerLine2D(object):
     def pairDistanceMatrix(self):
         """
         """
-        partx = self.kdtree.data[:,0]
-        party = self.kdtree.data[:,1]
+        #partx = self.kdtree.data[:,0]
+        #party = self.kdtree.data[:,1]
+
+        partx = self.data[:,0]
+        party = self.data[:,1]
+
         dx = np.subtract.outer(partx , partx )
         dy = np.subtract.outer(party, party)
         distanceMatrix = np.hypot(dx, dy)

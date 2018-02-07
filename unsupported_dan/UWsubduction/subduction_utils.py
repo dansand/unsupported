@@ -201,15 +201,14 @@ def build_fault(tectModel, plates, gradFn, thickness, maxDepth, ds, vertoffset, 
     #make the slab data
     slabdata = slab_top([szloc, 1.0 - vertoffset], normal, gradFn, ds, maxDepth, tectModel.mesh)
 
-    plateDataXs = np.arange(plateBounds[0], plateBounds[1], ds)
+    #plate bounds are sorted l-r so we include ds to get the end point
+    plateDataXs = np.arange(plateBounds[0], plateBounds[1] + ds, ds)
 
     plateDataYs = (1.0 - vertoffset)*np.ones(len(plateDataXs))
     plateData = np.column_stack((plateDataXs, plateDataYs))
 
-    #print(plateBounds[0], plateBounds[1])
-
-    faultData = np.row_stack((plateData, slabdata))
-    #print(plateData.shape, slabdata.shape)
+    #exclude the first point in the slab top, as it appears in plate data
+    faultData = np.row_stack((plateData, slabdata[1:,:]))
 
     #build the marker Line
     fault = markerLine2D(tectModel.mesh, tmUwMap.velField, faultData[:,0], faultData[:,1],

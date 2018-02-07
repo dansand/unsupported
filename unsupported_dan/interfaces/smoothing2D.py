@@ -4,7 +4,8 @@ import numpy as np
 
 def particlesToAdd(markerLine, A, _lowdist, _updist = False):
 
-    all_particle_coords = markerLine.kdtree.data
+    #all_particle_coords = markerLine.kdtree.data
+    all_particle_coords = markerLine.data
 
     #We want only the lower half of the matrix, including the upper half would add particles twice
     Alow = np.tril(A)
@@ -43,7 +44,8 @@ def shadowMask(markerLine):
     #markerLine.rebuild()
 
 
-    allcs = markerLine.kdtree.data
+    #allcs = markerLine.kdtree.data
+    allcs = markerLine.data
     localcs = markerLine.swarm.particleCoordinates.data
 
     xmatch =np.in1d(allcs[:,0], localcs[:,0])
@@ -56,7 +58,7 @@ def shadowMask(markerLine):
 def laplaceVector(markerLine, k,  limit=0.25):
     """
     this includes my current appraoch to managing the local/shadow complexity
-    We build the Laplacian using the full particle coordinate data (accessed through kdtree.data)
+    We build the Laplacian using the full particle coordinate data (accessed through markerLine.data)
     Then apply a mask to the resulting update vector.
 
 
@@ -75,11 +77,13 @@ def laplaceVector(markerLine, k,  limit=0.25):
 
     n1 = np.array(nbIndexes)[:,0]
     n2 = np.array(nbIndexes)[:,1]
-    distances = np.linalg.norm(markerLine.kdtree.data[n2] - markerLine.kdtree.data[n1], axis = 1)
+    #distances = np.linalg.norm(markerLine.kdtree.data[n2] - markerLine.kdtree.data[n1], axis = 1)
+    distances = np.linalg.norm(markerLine.data[n2] - markerLine.data[n1], axis = 1)
 
     #Now compute the lapacian
     L = markerLine.laplacianMatrix(k = k)
-    dl = np.dot(L,markerLine.kdtree.data)
+    #dl = np.dot(L,markerLine.kdtree.data)
+    dl = np.dot(L,markerLine.data)
     dlNorms = np.linalg.norm(dl, axis = 1)
 
     #we only want to dampen the Laplacian if returns high values
@@ -112,8 +116,8 @@ def neighbourDistanceQuery(markerLine, A, _lowdist=1e-10, _updist = False):
 
     """
 
-    all_particle_coords = markerLine.kdtree.data
-
+    #all_particle_coords = markerLine.kdtree.data
+    all_particle_coords = markerLine.data
 
     #We want only the lower half of the matrix, including the upper half would add particles twice
     Alow = np.tril(A)
