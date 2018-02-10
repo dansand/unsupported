@@ -232,11 +232,13 @@ def remove_faults_from_boundaries(fCollect,  maskFn, out=(999999.,999999.)):
         with f.swarm.deform_swarm():
             f.swarm.particleCoordinates.data[mask] = out
 
+        f.rebuild() #10/02/18
+
 
 def remove_fault_drift(fCollect, verticalLevel, tolFac =1e-2 ):
 
     """
-    Stop fault particles from drifting aboove their strating position
+    Stop fault particles from drifting aboove their starting position
     """
 
     for f in fCollect:
@@ -244,6 +246,7 @@ def remove_fault_drift(fCollect, verticalLevel, tolFac =1e-2 ):
         mask = np.where(f.swarm.particleCoordinates.data[:,1] > verticalLevel + (1. - verticalLevel)*tolFac)[0]
         with f.swarm.deform_swarm():
             f.swarm.particleCoordinates.data[mask,1] = yPosArray[mask]
+        f.rebuild() #10/02/18
 
 
 def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
@@ -270,6 +273,8 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
         #now run a kdtree query
         plateParticles = masterSwarm.particleCoordinates.data[mask1,:]
 
+        print("pop_or_perish check", plateParticles.shape, f.data.shape)
+
         #this is hopefully the only parallel safeguard we need. But be afaid.
         if plateParticles.shape[0] > 0:
             mask3 = (f.kdtree.query(plateParticles)[0] > ds)
@@ -277,3 +282,5 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
             #now we can add these in
             dataToAdd = masterSwarm.particleCoordinates.data[mask1,:][mask3]
             f.swarm.add_particles_with_coordinates(dataToAdd)
+
+        f.rebuild() #10/02/18
