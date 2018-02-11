@@ -509,6 +509,12 @@ class markerLine2D(object):
                 all_particle_coords[:,0] += dX
                 all_particle_coords[:,1] += dX
 
+        #special cases where self.empty == True
+        if len(all_particle_coords) == 1:
+            return np.array([1])
+        elif len(all_particle_coords) == 2:
+            return np.fliplr(np.eye(2))
+
 
         queryOut = self.kdtree.query(all_particle_coords, k=all_particle_coords.shape[0] )
         ids = queryOut[1]

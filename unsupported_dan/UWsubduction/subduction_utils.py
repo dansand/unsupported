@@ -273,10 +273,11 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
         #now run a kdtree query
         plateParticles = masterSwarm.particleCoordinates.data[mask1,:]
 
-        print("pop_or_perish check", plateParticles.shape, f.data.shape)
+        #print("pop_or_perish check", plateParticles.shape, f.data.shape)
 
         #this is hopefully the only parallel safeguard we need. But be afaid.
-        if plateParticles.shape[0] > 0:
+        #if plateParticles.shape[0] > 0:
+        if not f.empty:
             mask3 = (f.kdtree.query(plateParticles)[0] > ds)
 
             #now we can add these in
