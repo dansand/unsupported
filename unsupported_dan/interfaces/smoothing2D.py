@@ -77,6 +77,9 @@ def laplaceVector(markerLine, k,  limit=0.25):
 
     dlF = np.empty((0,2))
 
+    if len(all_particle_coords) == 1: #safeguard for little arrays
+        return dlF
+
     if all_particle_coords.shape[1]:
         nbIndexes = [ list(np.nonzero(t)[0]) for t in A ]
         for item in nbIndexes:
