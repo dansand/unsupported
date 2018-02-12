@@ -512,7 +512,9 @@ class markerLine2D(object):
         #All of the functions with barriers should have been called already
         #special cases where self.empty == True
         if len(all_particle_coords) == 1:
-            return np.array([1])
+            a = np.array([1])
+            a2 = np.expand_dims(a,axis=1)
+            return a2
         elif len(all_particle_coords) == 2:
             return np.fliplr(np.eye(2))
 
