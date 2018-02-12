@@ -262,7 +262,10 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
     """
 
     #build the main plate ID function, including the plate boundary mask.
-    pIdFn = tectModel.plate_id_fn(maskFn=maskFn)
+    #we need to flip the mask function before handing to plate_id_fn
+
+    maskFn_ = tectModel.t2f(maskFn)
+    pIdFn = tectModel.plate_id_fn(maskFn=maskFn_)
     #evaluate on the master swarm (local proc)
     iDs = pIdFn.evaluate(masterSwarm)
     #loop through faults

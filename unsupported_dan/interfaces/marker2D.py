@@ -509,7 +509,7 @@ class markerLine2D(object):
                 all_particle_coords[:,0] += dX
                 all_particle_coords[:,1] += dX
 
-        #hotfix
+        #All of the functions with barriers should have been called already
         #special cases where self.empty == True
         if len(all_particle_coords) == 1:
             return np.array([1])
@@ -569,13 +569,17 @@ class markerLine2D(object):
         #all_particle_coords = self.kdtree.data
         all_particle_coords = self.data
 
-        if len(all_particle_coords) == 1: #safeguard for little arrays
-            return np.array([0.])
+        #if len(all_particle_coords) == 1: #safeguard for little arrays
+        #    return np.array([0.])
 
         #create 2s on the diagonal
         L = 2.*np.eye(all_particle_coords.shape[0])
 
         A = self.neighbourMatrix(k= k)
+
+        #All of the functions / methods with basrriers need to go above this line
+        if len(all_particle_coords) == 1: #safeguard for little arrays
+            return np.array([0.])
 
         #set all neighbours to -1
         L[A == 1] = -1
