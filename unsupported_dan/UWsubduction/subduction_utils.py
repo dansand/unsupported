@@ -202,7 +202,7 @@ def build_fault(tectModel, plates, gradFn, thickness, maxDepth, ds, vertoffset, 
     slabdata = slab_top([szloc, 1.0 - vertoffset], normal, gradFn, ds, maxDepth, tectModel.mesh)
 
     #plate bounds are sorted l-r so we include ds to get the end point
-    plateDataXs = np.arange(plateBounds[0], plateBounds[1] + ds, ds)
+    plateDataXs = np.arange(plateBounds[0] + ds, plateBounds[1] + ds, ds)
 
     plateDataYs = (1.0 - vertoffset)*np.ones(len(plateDataXs))
     plateData = np.column_stack((plateDataXs, plateDataYs))
@@ -220,19 +220,34 @@ def build_fault(tectModel, plates, gradFn, thickness, maxDepth, ds, vertoffset, 
     return fault
 
 
-def remove_faults_from_boundaries(fCollect,  maskFn, out=(999999.,999999.)):
+def remove_faults_from_boundaries(tectModel, fCollect,  maskFn, out=(999999.,999999.)):
 
     """
     Remove Fauls from Ridges
     """
+    #build the main plate ID function, including the plate boundary mask.
+    #we need to flip the mask function before handing to plate_id_fn
 
-
+    maskFn_ = tectModel.t2f(maskFn)
+    pIdFn = tectModel.plate_id_fn(maskFn=maskFn_)
+    #evaluate on the master swarm (local proc)
+    #iDs = pIdFn.evaluate(masterSwarm)
+    #loop through faults
     for f in fCollect:
-        mask = np.where(maskFn.evaluate(f.swarm) == True)[0]  #can use == 0
-        with f.swarm.deform_swarm():
-            f.swarm.particleCoordinates.data[mask] = out
+        #mask for the plate, inclusing the specified plate boundary mask
+        #mask1 = np.where(iDs == f.ID)[0]
+        mask1 = np.where(pIdFn.evaluate(f.swarm) == f.ID)[0]  #can use == 0
 
-        f.rebuild() #10/02/18
+        with f.swarm.deform_swarm():
+            f.swarm.particleCoordinates.data[mask1] = out
+            #f.rebuild() #10/02/18
+
+#    for f in fCollect:
+#        mask = np.where(maskFn.evaluate(f.swarm) == True)[0]  #can use == 0
+#        with f.swarm.deform_swarm():
+#            f.swarm.particleCoordinates.data[mask] = out
+
+#        f.rebuild() #10/02/18
 
 
 def remove_fault_drift(fCollect, verticalLevel, tolFac =1e-2 ):
