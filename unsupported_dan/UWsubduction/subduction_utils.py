@@ -298,8 +298,10 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
         if not f.empty:
             mask3 = (f.kdtree.query(plateParticles)[0] > ds)
 
-            #now we can add these in
+
             dataToAdd = masterSwarm.particleCoordinates.data[mask1,:][mask3]
+            #now we can add these in
+            #print("pop_or_perish check", dataToAdd.shape, f.data.shape)
             f.swarm.add_particles_with_coordinates(dataToAdd)
 
         f.rebuild() #10/02/18
