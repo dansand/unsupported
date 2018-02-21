@@ -306,12 +306,12 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
         ignore = minmax_coordx.evaluate(f.swarm)
         leftExt = minmax_coordx.min_global()
         rightExt = minmax_coordx.max_global()
-        print("fault extent", leftExt , rightExt)
+        #print("fault extent", leftExt , rightExt)
 
         if not f.empty:
             mask3 = np.logical_or(plateParticles[:,0] < (leftExt - ds),  plateParticles[:,0] > (rightExt + ds))
             dataToAdd = masterSwarm.particleCoordinates.data[mask1,:][mask3]
             f.swarm.add_particles_with_coordinates(dataToAdd)
-            print("adding data", dataToAdd.shape)
+            #print("adding data", dataToAdd.shape)
 
         f.rebuild() #10/02/18
