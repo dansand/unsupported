@@ -288,20 +288,27 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
         #mask for the plate, inclusing the specified plate boundary mask
         mask1 = np.where(iDs == f.ID)[0]
 
-        #now run a kdtree query
+
         plateParticles = masterSwarm.particleCoordinates.data[mask1,:]
-
-        #print("pop_or_perish check", plateParticles.shape, f.data.shape)
-
         #this is hopefully the only parallel safeguard we need. But be afaid.
-        #if plateParticles.shape[0] > 0:
-        if not f.empty:
-            mask3 = (f.kdtree.query(plateParticles)[0] > ds)
 
-
-            dataToAdd = masterSwarm.particleCoordinates.data[mask1,:][mask3]
+        #initially I was using a KDTree query to apply the new fault particles.
+        #But this is really very unstable
+        #if not f.empty:
+        #    mask3 = (f.kdtree.query(plateParticles)[0] > ds)
+        #    dataToAdd = masterSwarm.particleCoordinates.data[mask1,:][mask3]
             #now we can add these in
-            #print("pop_or_perish check", dataToAdd.shape, f.data.shape)
+        #    f.swarm.add_particles_with_coordinates(dataToAdd)
+
+        #Now I'm using the global extent of the markerLine2D swarm,
+        #To define where NOT to add new particles
+        minmax_coordx = fn.view.min_max(fn.coord()[0])
+        ignore = minmax_coordx.evaluate(f.swarm)
+        leftExt = minmax_coordx.min_global()
+        rightExt = minmax_coordx.max_global()
+        if not f.empty:
+            mask3 = np.logical_and(plateParticles[:,0] < (leftExt - ds),  plateParticles[:,0] > (rightExt + ds))
+            dataToAdd = masterSwarm.particleCoordinates.data[mask1,:][mask3]
             f.swarm.add_particles_with_coordinates(dataToAdd)
 
         f.rebuild() #10/02/18
