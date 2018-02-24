@@ -31,7 +31,7 @@ dp.surfaceTemp_ = dp.surfaceTemp - dp.surfaceTemp
 #main rheology paramters (thermal convection parameters)
 dp.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
 dp.frictionMantle = u.Quantity(0.2)                                           #mantle friction coefficient in Byerlee law (tan(phi))
-dp.frictionMantleDepth = dp.frictionMantle*u.pascal/u.meter
+dp.frictionMantleDepth = dp.frictionMantle*dp.refDensity*dp.refGravity
 dp.diffusionPreExp = 5.34e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
 dp.diffusionEnergy = 3e5*u.joule/(u.mol)
 dp.diffusionEnergyDepth = 3e5*u.joule/(u.mol*dp.gasConstant)
