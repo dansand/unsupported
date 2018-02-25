@@ -25,10 +25,10 @@ pd.gasConstant = 8.314*u.joule/(u.mol*u.kelvin)                   #gas constant
 pd.specificHeat = 1250.4*u.joule/(u.kilogram* u.kelvin)           #Specific heat (Jkg-1K-1)
 pd.potentialTemp = 1573.*u.kelvin                                 #mantle potential temp (K)
 pd.surfaceTemp = 273.*u.kelvin                                    #surface temp (K)
-#these are the shifted dimensionless temps
+#these are the shifted temps, which will range from 0 - 1 in the dimensionless system
 pd.potentialTemp_ = pd.potentialTemp - pd.surfaceTemp
 pd.surfaceTemp_ = pd.surfaceTemp - pd.surfaceTemp
-#main rheology paramters (thermal convection parameters)
+#main rheology parameters
 pd.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
 pd.frictionMantle = u.Quantity(0.2)                                           #mantle friction coefficient in Byerlee law (tan(phi))
 pd.frictionMantleDepth = pd.frictionMantle*pd.refDensity*pd.refGravity
@@ -39,7 +39,8 @@ pd.diffusionVolume=5e-6*u.meter**3/(u.mol)
 pd.diffusionVolumeDepth=5e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.joule/(u.mol*pd.gasConstant*u.meter)
 pd.viscosityInterface = 5e19*u.pascal   * u.second
 pd.adiabaticTempGrad = (pd.refExpansivity*pd.refGravity*pd.potentialTemp)/pd.specificHeat
-
+pd.yieldStressMax=200*u.megapascal
+pd.lowerMantleViscFac = u.Quantity(30.0)
 
 
 #####################
@@ -50,9 +51,13 @@ md = edict({})
 #Model geometry, and misc Lengths used to control behaviour
 md.depth=1000*u.km                                                #Model Depth
 md.aspectRatio=5.
-md.interfaceViscCutoffDepth = 100*u.km
-md.interfaceViscEndWidth = 20*u.km
+#lengths, factors relating to subduction interface behaviour
+md.interfaceViscDepthTaperStart = 100*u.km
+md.interfaceViscDepthTaperWidth = 20*u.km
+md.interfaceViscHorizTaperStart = 300*u.k
+md.interfaceViscHorizTaperWidth = 300*u.k
 md.faultThickness = 10.*u.km
+md.faultLocFac = 1.                                                #this is the relative location of the fault in terms of the fault thickess from the top of slab
 md.faultDestroyDepth = 500*u.km                                    #interface material (crust) an top of slabs
 md.lowerMantleDepth=660.*u.km
 md.lowerMantleTransWidth=10.*u.km
@@ -67,15 +72,13 @@ md.res=48
 md.ppc=25                                                         #particles per cell
 md.elementType="Q1/dQ0"
 md.refineMesh = True
+md.meshRefineFactor = 0.7
 md.nltol = 0.01
 md.druckerAlpha = 1.
 md.penaltyMethod = True
 md.buoyancyFac = 1.0
-md.faultLocFac = 1. #this is the relative location of the fault in terms of the fault thickess from the top of slab
 md.viscosityMin = 1e18* u.pascal * u.second
 md.viscosityMax = 1e25* u.pascal * u.second
-md.lowerMantleViscFac = 30.0
-md.yieldStressMax=200*u.megapascal
 
 #####################
 #Next, define a standard set of scale factors used to non-dimensionalize the system
