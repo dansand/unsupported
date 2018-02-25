@@ -4,57 +4,42 @@ import numpy as np
 import pint
 import unsupported_dan.geodynamics.scaling as sub_scaling;
 
-u = sub_scaling.UnitRegistry
+UnitRegistry = sub_scaling.UnitRegistry
+u = UnitRegistry
 
 #####################
 #A set of physical parameters, that can be used to run basic subduction simulations
 #####################
 
-#dp refers to dimensional paramters
-dp = edict({})
+#pd refers to dimensional paramters
+pd = edict({})
 
 #Main physical paramters (thermal convection parameters)
-dp.refDensity = 3300.* u.kilogram / u.meter**3                    #reference density
-dp.refGravity = 9.8* u.metre / u.second**2                        #surface gravity
-dp.refDiffusivity = 1e-6 *u.metre**2 / u.second                   #thermal diffusivity
-dp.refExpansivity = 3e-5/u.kelvin                                        #surface thermal expansivity
-dp.refViscosity = 1e20* u.pascal* u.second
-dp.refLength = 2900*u.km
-dp.gasConstant = 8.314*u.joule/(u.mol*u.kelvin)                   #gas constant
-dp.specificHeat = 1250.4*u.joule/(u.kilogram* u.kelvin)           #Specific heat (Jkg-1K-1)
-dp.potentialTemp = 1573.*u.kelvin                                 #mantle potential temp (K)
-dp.surfaceTemp = 273.*u.kelvin                                    #surface temp (K)
+pd.refDensity = 3300.* u.kilogram / u.meter**3                    #reference density
+pd.refGravity = 9.8* u.metre / u.second**2                        #surface gravity
+pd.refDiffusivity = 1e-6 *u.metre**2 / u.second                   #thermal diffusivity
+pd.refExpansivity = 3e-5/u.kelvin                                 #surface thermal expansivity
+pd.refViscosity = 1e20* u.pascal* u.second
+pd.refLength = 2900*u.km
+pd.gasConstant = 8.314*u.joule/(u.mol*u.kelvin)                   #gas constant
+pd.specificHeat = 1250.4*u.joule/(u.kilogram* u.kelvin)           #Specific heat (Jkg-1K-1)
+pd.potentialTemp = 1573.*u.kelvin                                 #mantle potential temp (K)
+pd.surfaceTemp = 273.*u.kelvin                                    #surface temp (K)
 #these are the shifted dimensionless temps
-dp.potentialTemp_ = dp.potentialTemp - dp.surfaceTemp
-dp.surfaceTemp_ = dp.surfaceTemp - dp.surfaceTemp
-#dp.deltaT = dp.potentialTemp - dp.surfaceTemp
+pd.potentialTemp_ = pd.potentialTemp - pd.surfaceTemp
+pd.surfaceTemp_ = pd.surfaceTemp - pd.surfaceTemp
 #main rheology paramters (thermal convection parameters)
-dp.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
-dp.frictionMantle = u.Quantity(0.2)                                           #mantle friction coefficient in Byerlee law (tan(phi))
-dp.frictionMantleDepth = dp.frictionMantle*dp.refDensity*dp.refGravity
-dp.diffusionPreExp = 5.34e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
-dp.diffusionEnergy = 3e5*u.joule/(u.mol)
-dp.diffusionEnergyDepth = 3e5*u.joule/(u.mol*dp.gasConstant)
-dp.diffusionVolume=5e-6*u.meter**3/(u.mol)
-dp.diffusionVolumeDepth=5e-6*dp.refDensity.magnitude*dp.refGravity.magnitude*u.joule/(u.mol*dp.gasConstant*u.meter)
-dp.viscosityInterface = 5e19*u.pascal   * u.second
-dp.adiabaticTempGrad = (dp.refExpansivity*dp.refGravity*dp.potentialTemp)/dp.specificHeat
+pd.cohesionMantle = 20.*u.megapascal                              #mantle cohesion in Byerlee law
+pd.frictionMantle = u.Quantity(0.2)                                           #mantle friction coefficient in Byerlee law (tan(phi))
+pd.frictionMantleDepth = pd.frictionMantle*pd.refDensity*pd.refGravity
+pd.diffusionPreExp = 5.34e-10/u.pascal/u.second                   #pre-exp factor for diffusion creep
+pd.diffusionEnergy = 3e5*u.joule/(u.mol)
+pd.diffusionEnergyDepth = 3e5*u.joule/(u.mol*pd.gasConstant)
+pd.diffusionVolume=5e-6*u.meter**3/(u.mol)
+pd.diffusionVolumeDepth=5e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.joule/(u.mol*pd.gasConstant*u.meter)
+pd.viscosityInterface = 5e19*u.pascal   * u.second
+pd.adiabaticTempGrad = (pd.refExpansivity*pd.refGravity*pd.potentialTemp)/pd.specificHeat
 
-
-#####################
-#Next, define a standard set of scale factors used to non-dimensionalize the system
-#####################
-
-
-KL = dp.refLength
-KT = dp.potentialTemp - dp.surfaceTemp
-Kt = KL**2/dp.refDiffusivity
-KM = dp.refViscosity * KL * Kt
-
-sub_scaling.scaling["[length]"]      = KL.to_base_units()
-sub_scaling.scaling["[temperature]"] = KT.to_base_units()
-sub_scaling.scaling["[mass]"]        = KM.to_base_units()
-sub_scaling.scaling["[time]"] =        Kt.to_base_units()
 
 
 #####################
@@ -70,12 +55,13 @@ md.interfaceViscEndWidth = 20*u.km
 md.faultThickness = 10.*u.km
 md.faultDestroyDepth = 500*u.km                                    #interface material (crust) an top of slabs
 md.lowerMantleDepth=660.*u.km
+md.lowerMantleTransWidth=10.*u.km
 #Slab and plate init. parameters
 md.subZoneLoc=-100*u.km                                           #X position of subduction zone...km
 md.slabInitMaxDepth=150*u.km
-md.radiusOfCurv = 350*u.km                                        #radius of curvature
-md.slabAge=70*u.megayears                                      #age of subduction plate at trench
-md.opAgeAtTrench=35*u.megayears                                        #age of op
+md.radiusOfCurv = 350.*u.km                                        #radius of curvature
+md.slabAge=70.*u.megayears                                      #age of subduction plate at trench
+md.opAgeAtTrench=35.*u.megayears                                        #age of op
 #numerical and computation params
 md.res=48
 md.ppc=25                                                         #particles per cell
@@ -91,32 +77,48 @@ md.viscosityMax = 1e25* u.pascal * u.second
 md.lowerMantleViscFac = 30.0
 md.yieldStressMax=200*u.megapascal
 
+#####################
+#Next, define a standard set of scale factors used to non-dimensionalize the system
+#####################
+
+
+KL = pd.refLength
+KT = pd.potentialTemp - pd.surfaceTemp
+Kt = KL**2/pd.refDiffusivity
+KM = pd.refViscosity * KL * Kt
+
+sub_scaling.scaling["[length]"]      = KL.to_base_units()
+sub_scaling.scaling["[temperature]"] = KT.to_base_units()
+sub_scaling.scaling["[mass]"]        = KM.to_base_units()
+sub_scaling.scaling["[time]"] =        Kt.to_base_units()
+
 
 #####################
-#Now we map dp, md to non-nonDimensionalized dictionaries
+#Now we map pd, md to non-nonDimensionalized dictionaries, paramDict, modelDict
 #####################
 
-paramDict = edict({})
-for key, val in dp.items():
+paramDict  = edict({})
+
+for key, val in pd.items():
     if val.unitless:
-        paramDict[key] = val.magnitude
+        paramDict [key] = val.magnitude
     else:
-        paramDict[key] = sub_scaling.nonDimensionalize(val)
+        paramDict [key] = sub_scaling.nonDimensionalize(val)
 
 
-md_ = edict({})
+
+modelDict= edict({})
 for key, val in md.items():
-    md_[key] = sub_scaling.nonDimensionalize(val)
+    modelDict[key] = sub_scaling.nonDimensionalize(val)
 
-modelDict = md_
 
 #####################
 #Finally, define some dimensional numbers and scaling factors
 #####################
 
 #Important to remember the to_base_units conversion here
-rayleighNumber = ((dp.refExpansivity*dp.refDensity*dp.refGravity*(dp.potentialTemp - dp.surfaceTemp)*dp.refLength**3).to_base_units() \
-                  /(dp.refViscosity*dp.refDiffusivity).to_base_units()).magnitude
+rayleighNumber = ((pd.refExpansivity*pd.refDensity*pd.refGravity*(pd.potentialTemp - pd.surfaceTemp)*pd.refLength**3).to_base_units() \
+                  /(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
 
-stressScale = ((dp.refDiffusivity*dp.refViscosity)/dp.refLength**2).magnitude
-pressureDepthGrad = ((dp.refDensity*dp.refGravity*dp.refLength**3).to_base_units()/(dp.refViscosity*dp.refDiffusivity).to_base_units()).magnitude
+stressScale = ((pd.refDiffusivity*pd.refViscosity)/pd.refLength**2).magnitude
+pressureDepthGrad = ((pd.refDensity*pd.refGravity*pd.refLength**3).to_base_units()/(pd.refViscosity*pd.refDiffusivity).to_base_units()).magnitude
