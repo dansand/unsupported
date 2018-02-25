@@ -54,8 +54,8 @@ md.aspectRatio=5.
 #lengths, factors relating to subduction interface behaviour
 md.interfaceViscDepthTaperStart = 100*u.km
 md.interfaceViscDepthTaperWidth = 20*u.km
-md.interfaceViscHorizTaperStart = 300*u.k
-md.interfaceViscHorizTaperWidth = 300*u.k
+md.interfaceViscHorizTaperStart = 300*u.km
+md.interfaceViscHorizTaperWidth = 300*u.km
 md.faultThickness = 10.*u.km
 md.faultLocFac = 1.                                                #this is the relative location of the fault in terms of the fault thickess from the top of slab
 md.faultDestroyDepth = 500*u.km                                    #interface material (crust) an top of slabs
