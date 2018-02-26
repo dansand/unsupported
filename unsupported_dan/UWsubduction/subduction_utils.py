@@ -199,8 +199,9 @@ def build_fault(tectModel, plates, gradFn, thickness, maxDepth, ds, vertoffset, 
 
 
 
-    #make the slab data
-    slabdata = slab_top([szloc, 1.0 - vertoffset], normal, gradFn, ds, maxDepth, tectModel.mesh)
+    #make the slab data,
+    #use maxDepth - vertoffset - ds, as the vertical distance is relative to the starting depth
+    slabdata = slab_top([szloc, 1.0 - vertoffset], normal, gradFn, ds, maxDepth - vertoffset - ds, tectModel.mesh)
 
     #plate bounds are sorted l-r so we include ds to get the end point
     plateDataXs = np.arange(plateBounds[0] + ds, plateBounds[1] + ds, ds)

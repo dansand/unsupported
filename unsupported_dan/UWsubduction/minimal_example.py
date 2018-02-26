@@ -37,7 +37,7 @@ pd.diffusionEnergy = 3e5*u.joule/(u.mol)
 pd.diffusionEnergyDepth = 3e5*u.joule/(u.mol*pd.gasConstant)
 pd.diffusionVolume=5e-6*u.meter**3/(u.mol)
 pd.diffusionVolumeDepth=5e-6*pd.refDensity.magnitude*pd.refGravity.magnitude*u.joule/(u.mol*pd.gasConstant*u.meter)
-pd.viscosityInterface = 5e19*u.pascal   * u.second
+pd.viscosityFault = 5e19*u.pascal   * u.second
 pd.adiabaticTempGrad = (pd.refExpansivity*pd.refGravity*pd.potentialTemp)/pd.specificHeat
 pd.yieldStressMax=200*u.megapascal
 pd.lowerMantleViscFac = u.Quantity(30.0)
@@ -52,14 +52,14 @@ md = edict({})
 #Model geometry, and misc Lengths used to control behaviour
 md.depth=1000*u.km                                                #Model Depth
 md.aspectRatio=5.
-#lengths, factors relating to subduction interface behaviour
-md.interfaceViscDepthTaperStart = 100*u.km
-md.interfaceViscDepthTaperWidth = 20*u.km
-md.interfaceViscHorizTaperStart = 300*u.km
-md.interfaceViscHorizTaperWidth = 300*u.km
+#lengths, factors relating to subduction fault behaviour
+md.faultViscDepthTaperStart = 100*u.km
+md.faultViscDepthTaperWidth = 20*u.km
+md.faultViscHorizTaperStart = 300*u.km
+md.faultViscHorizTaperWidth = 300*u.km
 md.faultThickness = 10.*u.km
 md.faultLocFac = 1.                                                #this is the relative location of the fault in terms of the fault thickess from the top of slab
-md.faultDestroyDepth = 500*u.km                                    #interface material (crust) an top of slabs
+md.faultDestroyDepth = 500*u.km
 md.lowerMantleDepth=660.*u.km
 md.lowerMantleTransWidth=10.*u.km
 #Slab and plate init. parameters
@@ -72,7 +72,8 @@ md.opAgeAtTrench=35.*u.megayears                                        #age of 
 md.res=48
 md.ppc=25                                                         #particles per cell
 md.elementType="Q1/dQ0"
-md.refineMesh = True
+md.refineHoriz = True
+md.refineVert = True
 md.meshRefineFactor = 0.7
 md.nltol = 0.01
 md.druckerAlpha = 1.
