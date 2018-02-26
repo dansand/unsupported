@@ -1,7 +1,8 @@
 import numpy as np
 import math
 from easydict import EasyDict as edict
-from unsupported_dan.interfaces.marker2D import markerLine2D, line_collection
+#from unsupported_dan.interfaces.marker2D import markerLine2D, line_collection
+from unsupported_dan.interfaces.interface2D import interface2D , interface_collection
 from underworld import function as fn
 
 
@@ -113,7 +114,7 @@ def build_slab_distance(tectModel, plates, gradFn, maxDepth, tmUwMap):
 
 
     """
-    We're going to build the slab temperature perturbation by mapping from a markerLine to the swarm
+    We're going to build the slab temperature perturbation by mapping from a interface2D to the swarm
 
     """
     #tmUwMap
@@ -142,9 +143,9 @@ def build_slab_distance(tectModel, plates, gradFn, maxDepth, tmUwMap):
 
 
 
-    #build the marker Line
+    #build the interface2D
     id_ = -99 #in this case, just a dummy value
-    slabLine = markerLine2D(tectModel.mesh, tmUwMap.velField, slabdata[:,0], slabdata[:,1],
+    slabLine = interface2D(tectModel.mesh, tmUwMap.velField, slabdata[:,0], slabdata[:,1],
                             slabthickness, id_, insidePt=insidePt)
 
     #print (1. - slabLine.swarm.particleCoordinates.data[:,1].min())*2900
@@ -179,7 +180,7 @@ def build_fault(tectModel, plates, gradFn, thickness, maxDepth, ds, vertoffset, 
 
 
     """
-    We're going to build the slab temperature perturbation by mapping from a markerLine to the swarm
+    We're going to build the slab temperature perturbation by mapping from a interface2D to the swarm
 
     """
 
@@ -210,8 +211,8 @@ def build_fault(tectModel, plates, gradFn, thickness, maxDepth, ds, vertoffset, 
     #exclude the first point in the slab top, as it appears in plate data
     faultData = np.row_stack((plateData, slabdata[1:,:]))
 
-    #build the marker Line
-    fault = markerLine2D(tectModel.mesh, tmUwMap.velField, faultData[:,0], faultData[:,1],
+    #build the interface2D
+    fault = interface2D(tectModel.mesh, tmUwMap.velField, faultData[:,0], faultData[:,1],
                             thickness, spId, insidePt=insidePt)
 
    # with fault.swarm.deform_swarm():
@@ -300,7 +301,7 @@ def pop_or_perish(tectModel, fCollect, masterSwarm, maskFn, ds):
             #now we can add these in
         #    f.swarm.add_particles_with_coordinates(dataToAdd)
 
-        #Now I'm using the global extent of the markerLine2D swarm,
+        #Now I'm using the global extent of the interface2D swarm,
         #To define where NOT to add new particles
         minmax_coordx = fn.view.min_max(fn.coord()[0])
         ignore = minmax_coordx.evaluate(f.swarm)

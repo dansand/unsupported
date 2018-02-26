@@ -2,11 +2,11 @@
 from unsupported_dan import interfaces
 import numpy as np
 
-def particlesToAdd(markerLine, A, _lowdist, _updist = False):
+def particlesToAdd(interface2D, A, _lowdist, _updist = False):
 
     #Build all objects that need to be called collectively
-    all_particle_coords = markerLine.data
-    pd = markerLine.pairDistanceMatrix()
+    all_particle_coords = interface2D.data
+    pd = interface2D.pairDistanceMatrix()
     #We want only the lower half of the matrix, including the upper half would add particles twice
     Alow = np.tril(A)
 
@@ -35,17 +35,17 @@ def particlesToAdd(markerLine, A, _lowdist, _updist = False):
     return newPoints
 
 
-def shadowMask(markerLine):
+def shadowMask(interface2D):
 
     """
     Builds a boolean mask that filters only the local particles,
-    from an markerLine particle array that includes both shadow and local
+    from an interface2D particle array that includes both shadow and local
     """
 
 
-    #allcs = markerLine.kdtree.data
-    allcs = markerLine.data
-    localcs = markerLine.swarm.particleCoordinates.data
+    #allcs = interface2D.kdtree.data
+    allcs = interface2D.data
+    localcs = interface2D.swarm.particleCoordinates.data
 
     indexes = np.empty((0,)).astype('bool')
 
@@ -58,22 +58,22 @@ def shadowMask(markerLine):
     return indexes
 
 
-def laplaceVector(markerLine, k,  limit=0.25):
+def laplaceVector(interface2D, k,  limit=0.25):
     """
     this includes my current approach to managing the local/shadow complexity
-    We build the Laplacian using the full particle coordinate data (accessed through markerLine.data)
+    We build the Laplacian using the full particle coordinate data (accessed through interface2D.data)
     Then apply a mask to the resulting update vector.
 
 
     """
 
     #First we want to get the distances between neighbours for each point
-    A = markerLine.neighbourMatrix( k =k)
+    A = interface2D.neighbourMatrix( k =k)
     #and we only want to return the vector corresponding to local points
-    shmask = shadowMask(markerLine)
-    all_particle_coords = markerLine.data
+    shmask = shadowMask(interface2D)
+    all_particle_coords = interface2D.data
     #build the lapacian matrix
-    L = markerLine.laplacianMatrix(k = k)
+    L = interface2D.laplacianMatrix(k = k)
 
     dlF = np.empty((0,2))
 
@@ -92,11 +92,11 @@ def laplaceVector(markerLine, k,  limit=0.25):
 
         n1 = np.array(nbIndexes)[:,0]
         n2 = np.array(nbIndexes)[:,1]
-        #distances = np.linalg.norm(markerLine.kdtree.data[n2] - markerLine.kdtree.data[n1], axis = 1)
+        #distances = np.linalg.norm(interface2D.kdtree.data[n2] - interface2D.kdtree.data[n1], axis = 1)
         distances = np.linalg.norm(all_particle_coords[n2] - all_particle_coords[n1], axis = 1)
 
 
-        #dl = np.dot(L,markerLine.kdtree.data)
+        #dl = np.dot(L,interface2D.kdtree.data)
         dl = np.dot(L,all_particle_coords)
         dlNorms = np.linalg.norm(dl, axis = 1)
 
@@ -111,10 +111,10 @@ def laplaceVector(markerLine, k,  limit=0.25):
 
     return dlF
 
-def neighbourDistanceQuery(markerLine, A, _lowdist=1e-10, _updist = False):
+def neighbourDistanceQuery(interface2D, A, _lowdist=1e-10, _updist = False):
 
     """
-    Queries the marker line and returns info about particles,
+    Queries the interface and returns info about particles,
     where the inter-particle distance fulfils the distance conditions
 
     Returns:
@@ -122,8 +122,8 @@ def neighbourDistanceQuery(markerLine, A, _lowdist=1e-10, _updist = False):
     These are generated with both the local and shadow info,
     meaning that some of the returned particles may no be on the local processor.
 
-    localIds: the ids of local part of the markerLine where the conditions were satisfied.
-    These are intended for deletion, so only the local part of the markerLine is wanted.
+    localIds: the ids of local part of the interface2D where the conditions were satisfied.
+    These are intended for deletion, so only the local part of the interface2D is wanted.
 
     """
 
@@ -131,10 +131,10 @@ def neighbourDistanceQuery(markerLine, A, _lowdist=1e-10, _updist = False):
     localIds = np.empty((0,)).astype('bool')
 
     #these methods need to be called by all procs
-    all_particle_coords = markerLine.data
-    shmask = shadowMask(markerLine)
+    all_particle_coords = interface2D.data
+    shmask = shadowMask(interface2D)
     Alow = np.tril(A) #We want only the lower half of the matrix,
-    pd = markerLine.pairDistanceMatrix()
+    pd = interface2D.pairDistanceMatrix()
 
     #Now we can isolate the processors with particles
     if all_particle_coords.shape[1]:
@@ -164,7 +164,7 @@ def neighbourDistanceQuery(markerLine, A, _lowdist=1e-10, _updist = False):
     return newPoints, localIds.flatten()
 
 
-def repair_markerLines(markerLine, ds, smoothCycles=1, k=4, _lambda = 0.5, laplaceLimit = 0.25 ):
+def repair_interface2D(interface2D, ds, smoothCycles=1, k=4, _lambda = 0.5, laplaceLimit = 0.25 ):
 
     """
     smoothCycles ...
@@ -177,42 +177,42 @@ def repair_markerLines(markerLine, ds, smoothCycles=1, k=4, _lambda = 0.5, lapla
     #Smoothing
     ###########
     for cyc in range(smoothCycles):
-        markerLine.rebuild()
-        Dl = laplaceVector(markerLine, k = k, limit=laplaceLimit)
+        interface2D.rebuild()
+        Dl = laplaceVector(interface2D, k = k, limit=laplaceLimit)
 
-        #print(markerLine.swarm.particleCoordinates.data[:].shape, Dl.shape)
+        #print(interface2D.swarm.particleCoordinates.data[:].shape, Dl.shape)
         #if Dl.shape[0]
 
-        with markerLine.swarm.deform_swarm():
-                markerLine.swarm.particleCoordinates.data[:] -= _lambda *Dl
+        with interface2D.swarm.deform_swarm():
+                interface2D.swarm.particleCoordinates.data[:] -= _lambda *Dl
 
     ###########
     #Addition
     ###########
 
     #these methods need to be called by all procs
-    markerLine.rebuild()
-    A = markerLine.neighbourMatrix( k =k)
-    newPoints = particlesToAdd(markerLine, A, _lowdist=2.*ds) #start addding particles above _lowdist
+    interface2D.rebuild()
+    A = interface2D.neighbourMatrix( k =k)
+    newPoints = particlesToAdd(interface2D, A, _lowdist=2.*ds) #start addding particles above _lowdist
 
     #Now we can isolate the processors that actually have points
-    if markerLine.empty:
+    if interface2D.empty:
         newPoints = np.empty((0,2))
-    markerLine.add_points(newPoints[:,0], newPoints[:,1])
+    interface2D.add_points(newPoints[:,0], newPoints[:,1])
 
     ###########
     #Removal
     ###########
 
-    #dummy arrays to use in case there's no markerLine on the proc
+    #dummy arrays to use in case there's no interface on the proc
     midPoints = np.empty((0,2))
     currentIds = np.empty((0,)).astype('bool')
     #these methods need to be called by all procs
-    markerLine.rebuild()
-    A = markerLine.neighbourMatrix( k =k)
-    midPoints, currentIds = neighbourDistanceQuery(markerLine, A, _lowdist=0.,_updist= 0.5*ds)
+    interface2D.rebuild()
+    A = interface2D.neighbourMatrix( k =k)
+    midPoints, currentIds = neighbourDistanceQuery(interface2D, A, _lowdist=0.,_updist= 0.5*ds)
 
-    with markerLine.swarm.deform_swarm():
-        markerLine.swarm.particleCoordinates.data[currentIds] = (9999999., 9999999.)
+    with interface2D.swarm.deform_swarm():
+        interface2D.swarm.particleCoordinates.data[currentIds] = (9999999., 9999999.)
 
-    markerLine.add_points(midPoints[:,0], midPoints[:,1])
+    interface2D.add_points(midPoints[:,0], midPoints[:,1])

@@ -8,16 +8,16 @@ import operator
 
 from scipy.spatial import cKDTree as kdTree
 
-class markerLine2D(object):
+class interface2D(object):
     """
-    All the bits and pieces needed to define a marker surface (in 2D) from a string of points
+    All the bits and pieces needed to define an interface(in 2D) from a string of points
     """
 
 
     def __init__(self, mesh, velocityField, pointsX, pointsY, fthickness, fID, insidePt=(0.0,0.0)):
 
 
-        # Marker swarms are probably sparse, and on most procs will have nothing to do
+        # Interface swarms are probably sparse, and on most procs will have nothing to do
         # if there are no particles (or not enough to compute what we need)
         # then set this flag and return appropriately. This can be checked once the swarm is
         # populated.
@@ -105,7 +105,7 @@ class markerLine2D(object):
 
     def advection(self, dt):
         """
-        Update marker swarm particles as material points and rebuild data structures
+        Update interface swarm particles as material points and rebuild data structures
         """
         self._swarm_advector.integrate( dt, update_owners=True)
         self.swarm.shadow_particles_fetch()
@@ -138,7 +138,7 @@ class markerLine2D(object):
 
 
 
-    def compute_marker_proximity(self, coords, distance=None):
+    def compute_interface_proximity(self, coords, distance=None):
         """
         Build a mask of values for points within the influence zone.
         """
@@ -447,7 +447,7 @@ class markerLine2D(object):
 
     def get_global_coords(self):
         """
-        In some cases we want to expose the global marker line position to all procs
+        In some cases we want to expose the global interface line position to all procs
         ***currently not working***
         (Documentation for Allgatherv is pretty sparse.)
         """
@@ -472,7 +472,7 @@ class markerLine2D(object):
     def neighbourMatrix(self, k= 4, jitter=False):
 
         """
-        neighbourMatrix tries to build neighbour information for a markerLine,
+        neighbourMatrix tries to build neighbour information for an interface2D,
         assuming that the points are unordered.
 
 
@@ -482,7 +482,7 @@ class markerLine2D(object):
 
         k is the number of neighbours to test before deciding that a nearest neigbour cannot be found (i.e the end of line)
 
-        the information is returned in the form of a dense matrix, where each row corresponds to a point in the marker line
+        the information is returned in the form of a dense matrix, where each row corresponds to a point in the interface
         And most rows will have exactly two non-zero element, the indexed of the two nearest neighbour.
         For these points, the matrix is symmetric
 
@@ -621,32 +621,32 @@ class markerLine2D(object):
         return distanceMatrix
 
 
-class line_collection(list):
+class interface_collection(list):
     '''
-    Collection (list) of markerLine2D objects which together define the global rheology
+    Collection (list) of interface2D objects which together define the global rheology
     '''
-    def __init__(self, line_list=None):
+    def __init__(self, interface_list=None):
 
         #initialise parent Class
-        super(line_collection, self).__init__()
+        super(interface_collection, self).__init__()
 
-        if line_list != None:
-            for line in line_list:
-                if isinstance(line, markerLine2D):
-                    super(line_collection, self).append(line)
+        if interface_list != None:
+            for interface in interface_list:
+                if isinstance(interface, interface2D):
+                    super(interface_collection, self).append(interface)
                 else:
-                    print "Non line object ", line, " not added to collection"
+                    print "Non interface object ", interface, " not added to collection"
 
         return
 
-    def append(self, line):
+    def append(self, interface):
         '''
 
         '''
-        if isinstance(line, markerLine2D): #
-            super(line_collection, self).append(line)
+        if isinstance(interface, interface2D): #
+            super(interface_collection, self).append(interface)
         else:
-            print "Non Line object ", line, " not added to collection"
+            print "Non interface object ", line, " not added to collection"
 
 
     ## Note that this is strictly 2D  !
