@@ -42,6 +42,7 @@ pd.adiabaticTempGrad = (pd.refExpansivity*pd.refGravity*pd.potentialTemp)/pd.spe
 pd.yieldStressMax=200*u.megapascal
 pd.lowerMantleViscFac = u.Quantity(30.0)
 
+paramDict_dim = pd
 
 #####################
 #md is a set of model settings, and parameters that can be used to run basic subduction simulations
@@ -80,6 +81,8 @@ md.buoyancyFac = 1.0
 md.viscosityMin = 1e18* u.pascal * u.second
 md.viscosityMax = 1e25* u.pascal * u.second
 
+modelDict_dim = md
+
 #####################
 #Next, define a standard set of scale factors used to non-dimensionalize the system
 #####################
@@ -100,19 +103,26 @@ sub_scaling.scaling["[time]"] =        Kt.to_base_units()
 #Now we map pd, md to non-nonDimensionalized dictionaries, paramDict, modelDict
 #####################
 
-paramDict  = edict({})
+def build_nondim_dict(d, sca):
+    ndd = edict({})
+    for key, val in d.items():
+        #can only call .magnitude on Pint quantities
+        if hasattr(val, 'dimensionality'):
+            if val.unitless:
+                ndd[key] = val.magnitude
+            else:
+                ndd[key] = sca.nonDimensionalize(val)
 
-for key, val in pd.items():
-    if val.unitless:
-        paramDict [key] = val.magnitude
-    else:
-        paramDict [key] = sub_scaling.nonDimensionalize(val)
+        else:
+            ndd[key] = val
+
+    return ndd
 
 
+#build the dimensionless dictionaries
+paramDict  = build_nondim_dict(pd, sub_scaling)
+modelDict= build_nondim_dict(md, sub_scaling)
 
-modelDict= edict({})
-for key, val in md.items():
-    modelDict[key] = sub_scaling.nonDimensionalize(val)
 
 
 #####################
