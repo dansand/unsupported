@@ -59,7 +59,7 @@ md.faultViscHorizTaperStart = 300*u.km
 md.faultViscHorizTaperWidth = 300*u.km
 md.faultThickness = 10.*u.km
 md.faultLocFac = 1.                                                #this is the relative location of the fault in terms of the fault thickess from the top of slab
-md.faultDestroyDepth = 500*u.km
+md.faultDestroyDepth = 300*u.km
 md.lowerMantleDepth=660.*u.km
 md.lowerMantleTransWidth=10.*u.km
 #Slab and plate init. parameters
