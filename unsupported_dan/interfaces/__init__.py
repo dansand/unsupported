@@ -11,6 +11,6 @@ Questions should be addressed to louis.moresi@unimelb.edu.au \n """
 
 
 from interface2D import *
-from interface3D import *
+from marker3D import *
 
 #from globalMarker2D import *
