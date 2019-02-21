@@ -52,8 +52,10 @@ def shadowMask(interface2D):
     if localcs.shape[0]:
         #indexes = np.full((localcs.shape[0]), True, dtype=bool)
         xmatch =np.in1d(allcs[:,0], localcs[:,0])
-        ymatch =np.in1d(allcs[:,1], localcs[:,1])
-        indexes = xmatch[(xmatch == ymatch)]
+
+        #ymatch =np.in1d(allcs[:,1], localcs[:,1])
+        #indexes = xmatch[(xmatch == ymatch)]      #checking both causes intermittent crashes
+        indexes = xmatch
 
     return indexes
 
